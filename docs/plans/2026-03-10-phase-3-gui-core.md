@@ -415,10 +415,10 @@ export class ActivityPoller {
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] `bun run check` passes
-- [ ] `bun run typecheck` passes
-- [ ] `bun test` passes — all existing tests still pass
-- [ ] New tests pass for `pinItem` and `unpinItem` in `tests/db/ghd-database.test.ts`
+- [x] `bun run check` passes
+- [x] `bun run typecheck` passes
+- [x] `bun test` passes — all existing tests still pass
+- [x] New tests pass for `pinItem` and `unpinItem` in `tests/db/ghd-database.test.ts`
 
 #### Manual Verification:
 - [ ] `bun run dev` launches without errors in the console
@@ -545,9 +545,9 @@ document.addEventListener("DOMContentLoaded", () => {
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] `bun run check` passes
-- [ ] `bun run typecheck` passes
-- [ ] `bun test` passes
+- [x] `bun run check` passes
+- [x] `bun run typecheck` passes
+- [x] `bun test` passes
 
 #### Manual Verification:
 - [ ] `bun run dev` — no errors in console, RPC connection established
@@ -805,9 +805,9 @@ function escapeHtml(text: string): string {
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] `bun run check` passes
-- [ ] `bun run typecheck` passes
-- [ ] `bun test` passes — new unit tests for `relativeTime`, `subjectTypeIcon`, `eventTypeLabel`, and `escapeHtml`
+- [x] `bun run check` passes
+- [x] `bun run typecheck` passes
+- [x] `bun test` passes — new unit tests for `relativeTime`, `subjectTypeIcon`, `eventTypeLabel`, and `escapeHtml`
 
 #### Manual Verification:
 - [ ] `bun run dev` shows notifications with event subtrees
@@ -1082,9 +1082,9 @@ function renderActivity(data: ActivityData[]): void {
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] `bun run check` passes
-- [ ] `bun run typecheck` passes
-- [ ] `bun test` passes — add unit test for `actionColor`
+- [x] `bun run check` passes
+- [x] `bun run typecheck` passes
+- [x] `bun test` passes — add unit test for `actionColor`
 
 #### Manual Verification:
 - [ ] Pinned tab shows cards grouped under section headers
@@ -1134,9 +1134,9 @@ No code changes needed — this is a manual verification step to confirm:
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] `bun run check` passes
-- [ ] `bun run typecheck` passes
-- [ ] `bun test` passes
+- [x] `bun run check` passes
+- [x] `bun run typecheck` passes
+- [x] `bun test` passes
 
 #### Manual Verification:
 - [ ] Launch app, wait for first poll cycle (up to 15 minutes, or trigger manually by restarting)
