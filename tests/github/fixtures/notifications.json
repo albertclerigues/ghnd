@@ -1,0 +1,34 @@
+[
+  {
+    "id": "1234567890",
+    "unread": true,
+    "reason": "mention",
+    "updated_at": "2026-03-10T09:00:00Z",
+    "last_read_at": null,
+    "subject": {
+      "title": "Fix memory leak in notification poller",
+      "url": "https://api.github.com/repos/acme/project/issues/42",
+      "type": "Issue"
+    },
+    "repository": {
+      "full_name": "acme/project",
+      "html_url": "https://github.com/acme/project"
+    }
+  },
+  {
+    "id": "1234567891",
+    "unread": true,
+    "reason": "review_requested",
+    "updated_at": "2026-03-10T08:30:00Z",
+    "last_read_at": "2026-03-09T12:00:00Z",
+    "subject": {
+      "title": "Add dark mode support",
+      "url": "https://api.github.com/repos/acme/project/pulls/99",
+      "type": "PullRequest"
+    },
+    "repository": {
+      "full_name": "acme/project",
+      "html_url": "https://github.com/acme/project"
+    }
+  }
+]

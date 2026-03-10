@@ -1,0 +1,26 @@
+[
+  {
+    "id": 200001,
+    "event": "committed",
+    "actor": null,
+    "body": null,
+    "html_url": "https://github.com/acme/project/pull/99/commits/abc123",
+    "created_at": "2026-03-10T07:00:00Z"
+  },
+  {
+    "id": 200002,
+    "event": "reviewed",
+    "user": { "login": "carol" },
+    "body": "Looks good overall, one small nit.",
+    "html_url": "https://github.com/acme/project/pull/99#pullrequestreview-200002",
+    "submitted_at": "2026-03-10T08:00:00Z"
+  },
+  {
+    "id": 200003,
+    "event": "review_requested",
+    "actor": { "login": "dave" },
+    "body": null,
+    "html_url": null,
+    "created_at": "2026-03-10T08:30:00Z"
+  }
+]

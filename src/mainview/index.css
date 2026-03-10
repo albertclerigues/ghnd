@@ -24,7 +24,6 @@ body {
 
 #titlebar {
   height: var(--titlebar-height);
-  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -36,7 +35,6 @@ body {
 #tabs {
   display: flex;
   gap: 4px;
-  -webkit-app-region: no-drag;
 }
 
 .tab {

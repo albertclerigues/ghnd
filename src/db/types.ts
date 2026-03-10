@@ -77,3 +77,65 @@ export interface SyncMetaRow {
   value: string;
   updated_at: string;
 }
+
+// Event type discriminated union for type-safe event handling
+export type NotificationEventType =
+  | "comment"
+  | "review"
+  | "review_request"
+  | "merge"
+  | "close"
+  | "reopen"
+  | "label"
+  | "assignment"
+  | "rename"
+  | "reference"
+  | "commit";
+
+// Input types for upsert operations (what goes INTO the DB)
+export interface UpsertNotificationInput {
+  threadId: ThreadId;
+  repository: string;
+  subjectType: string;
+  subjectTitle: string;
+  subjectUrl: string | null;
+  reason: string;
+  unread: boolean;
+  githubUpdatedAt: string;
+  githubLastReadAt: string | null;
+}
+
+export interface UpsertNotificationEventInput {
+  notificationThreadId: ThreadId;
+  eventId: EventId;
+  eventType: NotificationEventType;
+  actor: string;
+  body: string | null;
+  summary: string | null;
+  url: string | null;
+  eventTimestamp: string;
+}
+
+export interface UpsertActivityInput {
+  eventId: ActivityId;
+  eventType: string;
+  repository: string;
+  action: string;
+  targetTitle: string;
+  targetUrl: string | null;
+  eventTimestamp: string;
+}
+
+// Action vocabulary for normalized activity events
+export type ActivityAction =
+  | "committed"
+  | "commented"
+  | "opened"
+  | "closed"
+  | "merged"
+  | "reviewed"
+  | "created"
+  | "deleted"
+  | "forked"
+  | "starred"
+  | "released";

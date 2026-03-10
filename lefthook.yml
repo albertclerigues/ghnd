@@ -3,18 +3,18 @@ pre-commit:
   commands:
     typecheck:
       glob: "*.ts"
-      run: bun run typecheck
+      run: export PATH="$HOME/.bun/bin:$PATH" && bun run typecheck
     lint:
       glob: "*.{ts,json}"
-      run: bun run check
+      run: export PATH="$HOME/.bun/bin:$PATH" && bun run check
     unit-tests:
-      run: bun test
+      run: export PATH="$HOME/.bun/bin:$PATH" && bun test
 
 pre-push:
   commands:
     typecheck:
-      run: bun run typecheck
+      run: export PATH="$HOME/.bun/bin:$PATH" && bun run typecheck
     lint:
-      run: bun run check
+      run: export PATH="$HOME/.bun/bin:$PATH" && bun run check
     all-tests:
-      run: bun test
+      run: export PATH="$HOME/.bun/bin:$PATH" && bun test

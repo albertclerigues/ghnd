@@ -3,6 +3,8 @@ function initTabs(): void {
   const panels = document.querySelectorAll<HTMLElement>(".tab-panel");
 
   for (const tab of tabs) {
+    // Prevent drag region from capturing mouse events on buttons
+    tab.addEventListener("mousedown", (e) => e.stopPropagation());
     tab.addEventListener("click", () => {
       const target = tab.dataset["tab"];
       if (!target) return;
