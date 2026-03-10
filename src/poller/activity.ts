@@ -66,6 +66,7 @@ export class ActivityPoller {
           action: normalized.action,
           targetTitle: normalized.targetTitle,
           targetUrl: normalized.targetUrl,
+          body: normalized.body,
           eventTimestamp: event.created_at,
         });
         processed++;

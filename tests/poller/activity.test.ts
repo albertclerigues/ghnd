@@ -66,6 +66,7 @@ describe("ActivityPoller", () => {
       action: "committed",
       targetTitle: "Old commit",
       targetUrl: null,
+      body: null,
       eventTimestamp: "2020-01-01T00:00:00Z",
     });
 

@@ -18,12 +18,17 @@ describe("apiUrlToHtmlUrl", () => {
 describe("parseSubjectUrl", () => {
   it("extracts owner/repo/number from issue URL", () => {
     const result = parseSubjectUrl("https://api.github.com/repos/acme/project/issues/42");
-    expect(result).toEqual({ owner: "acme", repo: "project", number: 42 });
+    expect(result).toEqual({ owner: "acme", repo: "project", number: 42, kind: "issue" });
   });
 
   it("extracts from pull URL", () => {
     const result = parseSubjectUrl("https://api.github.com/repos/acme/project/pulls/99");
-    expect(result).toEqual({ owner: "acme", repo: "project", number: 99 });
+    expect(result).toEqual({ owner: "acme", repo: "project", number: 99, kind: "pull" });
+  });
+
+  it("extracts from discussion URL", () => {
+    const result = parseSubjectUrl("https://api.github.com/repos/acme/project/discussions/123");
+    expect(result).toEqual({ owner: "acme", repo: "project", number: 123, kind: "discussion" });
   });
 
   it("returns null for non-matching URLs", () => {

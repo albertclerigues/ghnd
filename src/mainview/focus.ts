@@ -68,17 +68,26 @@ export class FocusManager {
         this.notificationIndex = 0;
       }
     } else if (this.inSubItems) {
-      const maxEvent = (this.eventCounts[this.notificationIndex] ?? 1) - 1;
-      if (this.eventIndex < maxEvent) {
-        this.eventIndex++;
-      }
-      // At last event, stay (don't auto-exit)
+      this.moveDownInSubItems();
     } else {
       if (this.notificationIndex < this.notificationCount - 1) {
         this.notificationIndex++;
       }
     }
     this.emitChange();
+  }
+
+  private moveDownInSubItems(): void {
+    const maxEvent = (this.eventCounts[this.notificationIndex] ?? 1) - 1;
+    if (this.eventIndex < maxEvent) {
+      this.eventIndex++;
+    } else if (this.notificationIndex < this.notificationCount - 1) {
+      // At last event: exit sub-items and move to next notification
+      this.inSubItems = false;
+      this.eventIndex = -1;
+      this.notificationIndex++;
+    }
+    // At last event of last notification: stay
   }
 
   /** Enter sub-items of the current notification */

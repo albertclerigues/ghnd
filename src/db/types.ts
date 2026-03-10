@@ -34,6 +34,7 @@ export interface NotificationRow {
   github_last_read_at: string | null;
   dismissed_at: string | null;
   description_summary: string | null;
+  description_body: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -69,6 +70,7 @@ export interface ActivityRow {
   action: string;
   target_title: string;
   target_url: string | null;
+  body: string | null;
   event_timestamp: string;
   created_at: string;
 }
@@ -124,6 +126,7 @@ export interface UpsertActivityInput {
   action: string;
   targetTitle: string;
   targetUrl: string | null;
+  body: string | null;
   eventTimestamp: string;
 }
 

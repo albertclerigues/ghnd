@@ -2,11 +2,103 @@ import { Electroview } from "electrobun/view";
 import type {
   ActivityData,
   GHDRpcSchema,
+  NotificationEventData,
   NotificationWithEvents,
   PinnedGroupData,
 } from "../shared/rpc.js";
 import { FocusManager } from "./focus.js";
 import { actionColor, eventTypeLabel, relativeTime, subjectTypeIcon } from "./format.js";
+import { renderMarkdown } from "./markdown.js";
+
+// --- Event Compaction ---
+
+interface CompactedEvent {
+  eventType: string;
+  actor: string;
+  /** Compacted description (e.g., "assigned @user1, @user2; unassigned @user3") */
+  label: string;
+  eventTimestamp: string;
+  url: string | null;
+  summary: string | null;
+  /** Original event body (from first event in group, for sidebar) */
+  body: string | null;
+  /** Source event indices in the original array */
+  sourceIndices: number[];
+}
+
+const COMPACTABLE_TYPES = new Set(["assignment", "label"]);
+
+function toSingleCompactedEvent(event: NotificationEventData, index: number): CompactedEvent {
+  return {
+    eventType: event.eventType,
+    actor: event.actor,
+    label: eventTypeLabel(event.eventType),
+    eventTimestamp: event.eventTimestamp,
+    url: event.url,
+    summary: event.summary,
+    body: event.body,
+    sourceIndices: [index],
+  };
+}
+
+function compactGroup(
+  first: NotificationEventData,
+  group: Array<{ event: NotificationEventData; index: number }>,
+): CompactedEvent {
+  const bodies = group.map((g) => g.event.body).filter((b): b is string => b !== null);
+  return {
+    eventType: first.eventType,
+    actor: first.actor,
+    label: bodies.length > 0 ? bodies.join(", ") : eventTypeLabel(first.eventType),
+    eventTimestamp: first.eventTimestamp,
+    url: first.url,
+    summary: first.summary,
+    body: bodies.join("; "),
+    sourceIndices: group.map((g) => g.index),
+  };
+}
+
+function collectAdjacentGroup(
+  events: NotificationEventData[],
+  startIndex: number,
+  eventType: string,
+  actor: string,
+): { group: Array<{ event: NotificationEventData; index: number }>; nextIndex: number } {
+  const group: Array<{ event: NotificationEventData; index: number }> = [];
+  let i = startIndex;
+  while (i < events.length) {
+    const next = events[i];
+    if (!next || next.eventType !== eventType || next.actor !== actor) break;
+    group.push({ event: next, index: i });
+    i++;
+  }
+  return { group, nextIndex: i };
+}
+
+function compactEvents(events: NotificationEventData[]): CompactedEvent[] {
+  const result: CompactedEvent[] = [];
+  let i = 0;
+
+  while (i < events.length) {
+    const event = events[i];
+    if (!event) {
+      i++;
+      continue;
+    }
+
+    if (!COMPACTABLE_TYPES.has(event.eventType)) {
+      result.push(toSingleCompactedEvent(event, i));
+      i++;
+      continue;
+    }
+
+    const { group, nextIndex } = collectAdjacentGroup(events, i, event.eventType, event.actor);
+    result.push(compactGroup(event, group));
+    i = nextIndex;
+  }
+
+  return result;
+}
 
 // --- RPC Setup ---
 
@@ -28,8 +120,20 @@ const _view = new Electroview({ rpc });
 
 const focusManager = new FocusManager();
 let currentNotifications: NotificationWithEvents[] = [];
+let currentCompactedEvents: CompactedEvent[][] = [];
+
+// Activity focus state (simple index-based, no FocusManager needed)
+let currentActivityData: ActivityData[] = [];
+let activityFocusIndex = -1;
 
 // --- Tab Management ---
+
+type TabName = "notifications" | "pinned" | "activity";
+
+function getActiveTab(): TabName {
+  const active = document.querySelector<HTMLButtonElement>(".tab.active");
+  return (active?.dataset["tab"] as TabName) ?? "notifications";
+}
 
 function initTabs(): void {
   const tabs = document.querySelectorAll<HTMLButtonElement>(".tab");
@@ -47,14 +151,18 @@ function initTabs(): void {
       tab.classList.add("active");
       document.getElementById(`tab-${target}`)?.classList.add("active");
 
-      void refreshTab(target as "notifications" | "pinned" | "activity");
+      // Hide sidebar when switching tabs — each tab manages its own sidebar
+      hideSidebar();
+      activityFocusIndex = -1;
+
+      void refreshTab(target as TabName);
     });
   }
 }
 
 // --- Data Fetching & Rendering ---
 
-async function refreshTab(scope: "notifications" | "pinned" | "activity"): Promise<void> {
+async function refreshTab(scope: TabName): Promise<void> {
   switch (scope) {
     case "notifications":
       return refreshNotifications();
@@ -107,25 +215,26 @@ function renderNotificationBlock(notif: NotificationWithEvents): HTMLDivElement 
   if (notif.descriptionSummary) {
     const summaryLine = document.createElement("div");
     summaryLine.className = "notification-summary";
-    summaryLine.innerHTML = `✨ ${escapeHtml(notif.descriptionSummary)}`;
+    summaryLine.innerHTML = `\u2728 ${escapeHtml(notif.descriptionSummary)}`;
     block.appendChild(summaryLine);
   }
 
-  if (notif.events.length > 0) {
-    block.appendChild(renderEventTree(notif.events));
+  const compacted = compactEvents(notif.events);
+  if (compacted.length > 0) {
+    block.appendChild(renderEventTree(compacted));
   }
 
   return block;
 }
 
-function renderEventTree(events: NotificationWithEvents["events"]): HTMLDivElement {
+function renderEventTree(compacted: CompactedEvent[]): HTMLDivElement {
   const tree = document.createElement("div");
   tree.className = "event-tree";
 
-  for (let i = 0; i < events.length; i++) {
-    const event = events[i];
+  for (let i = 0; i < compacted.length; i++) {
+    const event = compacted[i];
     if (!event) continue;
-    const isLast = i === events.length - 1;
+    const isLast = i === compacted.length - 1;
     const connector = isLast ? "\u2514\u2500\u2500" : "\u251C\u2500\u2500";
 
     const line = document.createElement("div");
@@ -141,7 +250,7 @@ function renderEventTree(events: NotificationWithEvents["events"]): HTMLDivEleme
 
     line.innerHTML = `
       <span class="tree-connector">${connector}</span>
-      <span class="event-type">${eventTypeLabel(event.eventType)}</span>
+      <span class="event-type">${escapeHtml(event.label)}</span>
       <span class="event-actor">${escapeHtml(event.actor)}</span>
       <span class="event-time">${relativeTime(event.eventTimestamp)}</span>
       ${summaryHtml}
@@ -157,6 +266,7 @@ function renderNotifications(data: NotificationWithEvents[]): void {
   if (!container) return;
 
   currentNotifications = data;
+  currentCompactedEvents = data.map((notif) => compactEvents(notif.events));
 
   if (data.length === 0) {
     container.innerHTML = '<p class="placeholder">No notifications.</p>';
@@ -167,9 +277,11 @@ function renderNotifications(data: NotificationWithEvents[]): void {
   container.innerHTML = "";
   const eventCounts: number[] = [];
 
-  for (const notif of data) {
+  for (let idx = 0; idx < data.length; idx++) {
+    const notif = data[idx];
+    if (!notif) continue;
     container.appendChild(renderNotificationBlock(notif));
-    eventCounts.push(notif.events.length);
+    eventCounts.push(currentCompactedEvents[idx]?.length ?? 0);
   }
 
   focusManager.updateCounts(data.length, eventCounts);
@@ -225,6 +337,9 @@ function renderActivity(data: ActivityData[]): void {
   const container = document.getElementById("tab-activity");
   if (!container) return;
 
+  currentActivityData = data;
+  activityFocusIndex = -1;
+
   if (data.length === 0) {
     container.innerHTML = '<p class="placeholder">No activity.</p>';
     return;
@@ -279,7 +394,7 @@ function applyFocusStyles(): void {
   }
 
   if (state.notificationIndex === -1) {
-    hidePreviewBox();
+    hideSidebar();
     return;
   }
 
@@ -295,60 +410,163 @@ function applyFocusStyles(): void {
       eventLine.classList.add("focused");
       eventLine.scrollIntoView({ block: "nearest" });
     }
-    showPreviewBox(state.notificationIndex);
+    showSidebar(state.notificationIndex, state.eventIndex);
   } else {
     // Focus the notification block
     block.classList.add("focused");
     block.scrollIntoView({ block: "nearest" });
-    hidePreviewBox();
+    showSidebar(state.notificationIndex, -1);
   }
 }
 
 focusManager.setOnChange(() => applyFocusStyles());
 
-// --- Preview Box ---
+// --- Activity Focus ---
 
-function showPreviewBox(notificationIndex: number): void {
-  const box = document.getElementById("preview-box");
-  if (!box) return;
+function applyActivityFocusStyles(): void {
+  const container = document.getElementById("tab-activity");
+  if (!container) return;
 
-  const notif = currentNotifications[notificationIndex];
-  if (!notif) {
-    hidePreviewBox();
+  // Remove existing focus
+  for (const el of container.querySelectorAll(".focused")) {
+    el.classList.remove("focused");
+  }
+
+  if (activityFocusIndex === -1) {
+    hideSidebar();
     return;
   }
 
-  let summaryHtml = "";
-  const summary = (notif as NotificationWithEvents & { descriptionSummary?: string })
-    .descriptionSummary;
-  if (summary) {
-    summaryHtml = `<div class="preview-summary">\u2728 ${escapeHtml(summary)}</div>`;
-  }
+  const rows = container.querySelectorAll<HTMLElement>(".activity-table tbody tr");
+  const row = rows[activityFocusIndex];
+  if (!row) return;
 
-  box.innerHTML = `
-    <div class="preview-header">
-      <span class="notification-icon">${subjectTypeIcon(notif.subjectType)}</span>
-      <span class="preview-title">${escapeHtml(notif.subjectTitle)}</span>
-    </div>
-    <div class="preview-repo">${escapeHtml(notif.repository)}</div>
-    ${summaryHtml}
-  `;
-  box.classList.remove("hidden");
+  row.classList.add("focused");
+  row.scrollIntoView({ block: "nearest" });
+
+  const item = currentActivityData[activityFocusIndex];
+  if (item) {
+    showActivitySidebar(item);
+  }
 }
 
-function hidePreviewBox(): void {
-  const box = document.getElementById("preview-box");
-  if (box) {
-    box.classList.add("hidden");
+// --- Sidebar ---
+
+function renderEventSidebar(
+  notif: NotificationWithEvents,
+  notifIndex: number,
+  eventIndex: number,
+): string {
+  const compacted = currentCompactedEvents[notifIndex];
+  const event = compacted?.[eventIndex];
+  if (!event) return "";
+
+  const bodyHtml = event.body
+    ? renderMarkdown(event.body)
+    : event.summary
+      ? `<p>${escapeHtml(event.summary)}</p>`
+      : "<p>No content.</p>";
+
+  return `
+    <div class="sidebar-meta-title">${escapeHtml(notif.subjectTitle)}</div>
+    <div class="sidebar-meta-repo">${escapeHtml(notif.repository)}</div>
+    <div class="sidebar-meta-detail">${escapeHtml(event.label)} by ${escapeHtml(event.actor)} ${relativeTime(event.eventTimestamp)}</div>
+    <hr class="sidebar-divider">
+    <div class="sidebar-body">${bodyHtml}</div>
+  `;
+}
+
+function renderNotificationSidebar(notif: NotificationWithEvents): string {
+  let bodyHtml: string;
+  if (notif.descriptionBody) {
+    bodyHtml = renderMarkdown(notif.descriptionBody);
+  } else if (notif.descriptionSummary) {
+    bodyHtml = renderMarkdown(notif.descriptionSummary);
+  } else {
+    bodyHtml = "<p>No description.</p>";
+  }
+
+  const summaryLine = notif.descriptionSummary
+    ? `<div class="sidebar-meta-detail">\u2728 ${escapeHtml(notif.descriptionSummary)}</div>`
+    : "";
+
+  return `
+    <div class="sidebar-meta-title">${subjectTypeIcon(notif.subjectType)} ${escapeHtml(notif.subjectTitle)}</div>
+    <div class="sidebar-meta-repo">${escapeHtml(notif.repository)}</div>
+    <div class="sidebar-meta-detail">${escapeHtml(notif.subjectType)} \u00b7 ${escapeHtml(notif.reason)} \u00b7 ${relativeTime(notif.githubUpdatedAt)}</div>
+    ${summaryLine}
+    <hr class="sidebar-divider">
+    <div class="sidebar-body">${bodyHtml}</div>
+  `;
+}
+
+function renderActivitySidebar(item: ActivityData): string {
+  const bodyHtml = item.body ? renderMarkdown(item.body) : "";
+  const bodySection = bodyHtml
+    ? `<hr class="sidebar-divider"><div class="sidebar-body">${bodyHtml}</div>`
+    : "";
+
+  return `
+    <div class="sidebar-meta-title">
+      <span class="action-badge" style="background: ${actionColor(item.action)}">${escapeHtml(item.action)}</span>
+      ${escapeHtml(item.targetTitle)}
+    </div>
+    <div class="sidebar-meta-repo">${escapeHtml(item.repository)}</div>
+    <div class="sidebar-meta-detail">${escapeHtml(item.eventType)} \u00b7 ${relativeTime(item.eventTimestamp)}</div>
+    ${item.targetUrl ? `<div class="sidebar-meta-detail"><a href="#">${escapeHtml(item.targetUrl)}</a></div>` : ""}
+    ${bodySection}
+  `;
+}
+
+function showSidebar(notificationIndex: number, eventIndex: number): void {
+  const sidebar = document.getElementById("sidebar");
+  const content = document.getElementById("sidebar-content");
+  if (!sidebar || !content) return;
+
+  const notif = currentNotifications[notificationIndex];
+  if (!notif) {
+    hideSidebar();
+    return;
+  }
+
+  const html =
+    eventIndex >= 0
+      ? renderEventSidebar(notif, notificationIndex, eventIndex)
+      : renderNotificationSidebar(notif);
+
+  if (!html) {
+    hideSidebar();
+    return;
+  }
+
+  content.innerHTML = html;
+  sidebar.classList.remove("hidden");
+}
+
+function showActivitySidebar(item: ActivityData): void {
+  const sidebar = document.getElementById("sidebar");
+  const content = document.getElementById("sidebar-content");
+  if (!sidebar || !content) return;
+
+  content.innerHTML = renderActivitySidebar(item);
+  sidebar.classList.remove("hidden");
+}
+
+function hideSidebar(): void {
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar) {
+    sidebar.classList.add("hidden");
   }
 }
 
 // --- Keyboard Navigation ---
 
 function isNotificationsActive(): boolean {
-  return (
-    document.querySelector('.tab[data-tab="notifications"]')?.classList.contains("active") ?? false
-  );
+  return getActiveTab() === "notifications";
+}
+
+function isActivityActive(): boolean {
+  return getActiveTab() === "activity";
 }
 
 function switchToTab(tabName: string): void {
@@ -365,7 +583,8 @@ function handleEnter(): void {
 
   if (state.inSubItems) {
     // Open the specific event URL
-    const event = notif.events[state.eventIndex];
+    const compacted = currentCompactedEvents[state.notificationIndex];
+    const event = compacted?.[state.eventIndex];
     const url = event?.url ?? notif.subjectUrl;
     if (url) {
       void rpc.request("openInBrowser", { url, threadId: notif.threadId });
@@ -375,6 +594,83 @@ function handleEnter(): void {
     if (notif.subjectUrl) {
       void rpc.request("openInBrowser", { url: notif.subjectUrl, threadId: notif.threadId });
     }
+  }
+}
+
+function handleActivityEnter(): void {
+  if (activityFocusIndex === -1) return;
+  const item = currentActivityData[activityFocusIndex];
+  if (item?.targetUrl) {
+    void rpc.request("openInBrowser", { url: item.targetUrl });
+  }
+}
+
+function pinNotification(): void {
+  const state = focusManager.getState();
+  if (state.notificationIndex === -1) return;
+
+  const notif = currentNotifications[state.notificationIndex];
+  if (!notif) return;
+
+  if (state.inSubItems) {
+    pinNotificationEvent(notif, state.notificationIndex, state.eventIndex);
+  } else {
+    pinNotificationItem(notif);
+  }
+}
+
+function pinNotificationEvent(
+  notif: NotificationWithEvents,
+  notifIndex: number,
+  eventIndex: number,
+): void {
+  const compacted = currentCompactedEvents[notifIndex];
+  const event = compacted?.[eventIndex];
+  if (!event) return;
+
+  const url = event.url ?? notif.subjectUrl;
+  if (!url) return;
+
+  void rpc.request("pinItem", {
+    subjectType: event.eventType,
+    subjectTitle: `${event.label} — ${notif.subjectTitle}`,
+    subjectUrl: url,
+    repository: notif.repository,
+    notificationThreadId: notif.threadId,
+  });
+}
+
+function pinNotificationItem(notif: NotificationWithEvents): void {
+  if (!notif.subjectUrl) return;
+
+  void rpc.request("pinItem", {
+    subjectType: notif.subjectType,
+    subjectTitle: notif.subjectTitle,
+    subjectUrl: notif.subjectUrl,
+    repository: notif.repository,
+    notificationThreadId: notif.threadId,
+  });
+}
+
+function pinActivityItem(): void {
+  if (activityFocusIndex === -1) return;
+  const item = currentActivityData[activityFocusIndex];
+  if (!item?.targetUrl) return;
+
+  void rpc.request("pinItem", {
+    subjectType: item.eventType,
+    subjectTitle: item.targetTitle,
+    subjectUrl: item.targetUrl,
+    repository: item.repository,
+  });
+}
+
+function handlePin(): void {
+  const activeTab = getActiveTab();
+  if (activeTab === "notifications") {
+    pinNotification();
+  } else if (activeTab === "activity") {
+    pinActivityItem();
   }
 }
 
@@ -389,24 +685,30 @@ function handleSpace(): void {
   void rpc.request("markDone", { threadId: notif.threadId });
 }
 
-document.addEventListener("keydown", (e: KeyboardEvent) => {
-  // Tab switching: 1/2/3
-  if (e.key === "1") {
-    switchToTab("notifications");
-    return;
+function handleActivityKeydown(e: KeyboardEvent): void {
+  switch (e.key) {
+    case "ArrowUp":
+      e.preventDefault();
+      if (activityFocusIndex > 0) activityFocusIndex--;
+      applyActivityFocusStyles();
+      break;
+    case "ArrowDown":
+      e.preventDefault();
+      if (activityFocusIndex === -1) {
+        if (currentActivityData.length > 0) activityFocusIndex = 0;
+      } else if (activityFocusIndex < currentActivityData.length - 1) {
+        activityFocusIndex++;
+      }
+      applyActivityFocusStyles();
+      break;
+    case "Enter":
+      e.preventDefault();
+      handleActivityEnter();
+      break;
   }
-  if (e.key === "2") {
-    switchToTab("pinned");
-    return;
-  }
-  if (e.key === "3") {
-    switchToTab("activity");
-    return;
-  }
+}
 
-  // All other keys only work on notifications tab
-  if (!isNotificationsActive()) return;
-
+function handleNotificationsKeydown(e: KeyboardEvent): void {
   switch (e.key) {
     case "ArrowUp":
       e.preventDefault();
@@ -432,6 +734,29 @@ document.addEventListener("keydown", (e: KeyboardEvent) => {
       e.preventDefault();
       handleSpace();
       break;
+  }
+}
+
+const TAB_KEYS: Record<string, string> = { "1": "notifications", "2": "pinned", "3": "activity" };
+
+document.addEventListener("keydown", (e: KeyboardEvent) => {
+  // Cmd+D to pin focused item (works across tabs)
+  if (e.metaKey && e.key === "d") {
+    e.preventDefault();
+    handlePin();
+    return;
+  }
+
+  const tabTarget = TAB_KEYS[e.key];
+  if (tabTarget) {
+    switchToTab(tabTarget);
+    return;
+  }
+
+  if (isActivityActive()) {
+    handleActivityKeydown(e);
+  } else if (isNotificationsActive()) {
+    handleNotificationsKeydown(e);
   }
 });
 

@@ -2,7 +2,13 @@ import type { GHDDatabase } from "../db/queries.js";
 import type { EventId, ThreadId } from "../db/types.js";
 import { eventId, threadId } from "../db/types.js";
 import type { GitHubClient } from "../github/client.js";
-import { extractActor, extractEventId, extractTimestamp, mapEventType } from "../github/events.js";
+import {
+  extractActor,
+  extractBody,
+  extractEventId,
+  extractTimestamp,
+  mapEventType,
+} from "../github/events.js";
 import { apiUrlToHtmlUrl, parseSubjectUrl } from "../github/urls.js";
 import type { Summarizer } from "../summarizer/types.js";
 
@@ -101,9 +107,10 @@ export class NotificationPoller {
     });
 
     // Fetch timeline events if we can parse the subject URL
+    // Discussions don't have a REST API for timeline/details, so skip them
     if (notification.subject.url) {
       const parsed = parseSubjectUrl(notification.subject.url);
-      if (parsed) {
+      if (parsed && parsed.kind !== "discussion") {
         await this.fetchAndStoreTimeline(tid, parsed.owner, parsed.repo, parsed.number);
       }
     }
@@ -124,7 +131,7 @@ export class NotificationPoller {
       if (!mappedType) continue;
 
       const eid = eventId(extractEventId(event));
-      const body = event.body ?? null;
+      const body = extractBody(event);
 
       this.db.upsertNotificationEvent({
         notificationThreadId: tid,
@@ -142,23 +149,39 @@ export class NotificationPoller {
       }
     }
 
+    // Fetch and store the issue/PR description body
+    await this.fetchAndStoreDescription(tid, owner, repo, issueNumber);
+
     if (this.summarizer) {
-      void this.summarizeThread(tid, owner, repo, issueNumber, commentEvents);
+      void this.summarizeThread(tid, commentEvents);
+    }
+  }
+
+  private async fetchAndStoreDescription(
+    tid: ThreadId,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+  ): Promise<void> {
+    try {
+      const issueDetails = await this.github.getIssueDetails(owner, repo, issueNumber);
+      this.db.updateDescriptionBody(tid, issueDetails.body);
+    } catch (err) {
+      console.error(`[ghd] Failed to fetch description for thread ${String(tid)}:`, err);
     }
   }
 
   private async summarizeThread(
     tid: ThreadId,
-    owner: string,
-    repo: string,
-    issueNumber: number,
     commentEvents: Array<{ eventId: EventId; body: string }>,
   ): Promise<void> {
     try {
-      const issueDetails = await this.github.getIssueDetails(owner, repo, issueNumber);
+      // Use the stored description body for summarization
+      const notification = this.db.getNotificationByThreadId(tid);
+      const description = notification?.description_body ?? "";
 
       const content = {
-        description: issueDetails.body ?? "",
+        description,
         comments: commentEvents.map((c, i) => ({
           number: i + 1,
           body: c.body,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   extractActor,
+  extractBody,
   extractEventId,
   extractTimestamp,
   mapEventType,
@@ -101,5 +102,54 @@ describe("extractEventId", () => {
       created_at: "2026-03-10T07:00:00Z",
     };
     expect(extractEventId(event)).toBe("committed-2026-03-10T07:00:00Z");
+  });
+});
+
+describe("extractBody", () => {
+  it("returns body when present", () => {
+    const event: GitHubTimelineEvent = {
+      event: "commented",
+      body: "This is a comment.",
+    };
+    expect(extractBody(event)).toBe("This is a comment.");
+  });
+
+  it("constructs body for assigned events", () => {
+    const event: GitHubTimelineEvent = {
+      event: "assigned",
+      assignee: { login: "alice" },
+    };
+    expect(extractBody(event)).toBe("assigned @alice");
+  });
+
+  it("constructs body for unassigned events", () => {
+    const event: GitHubTimelineEvent = {
+      event: "unassigned",
+      assignee: { login: "bob" },
+    };
+    expect(extractBody(event)).toBe("unassigned @bob");
+  });
+
+  it("constructs body for labeled events", () => {
+    const event: GitHubTimelineEvent = {
+      event: "labeled",
+      label: { name: "bug" },
+    };
+    expect(extractBody(event)).toBe("added bug");
+  });
+
+  it("constructs body for unlabeled events", () => {
+    const event: GitHubTimelineEvent = {
+      event: "unlabeled",
+      label: { name: "wontfix" },
+    };
+    expect(extractBody(event)).toBe("removed wontfix");
+  });
+
+  it("returns null when no body or metadata", () => {
+    const event: GitHubTimelineEvent = {
+      event: "closed",
+    };
+    expect(extractBody(event)).toBeNull();
   });
 });

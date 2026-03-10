@@ -43,6 +43,7 @@ const rpc = BrowserView.defineRPC<GHDRpcSchema>({
           unread: n.unread === 1,
           githubUpdatedAt: n.github_updated_at,
           descriptionSummary: n.description_summary,
+          descriptionBody: n.description_body,
           events: db.getNotificationEvents(threadId(n.thread_id)).map((e) => ({
             eventId: e.event_id,
             eventType: e.event_type,
@@ -84,6 +85,7 @@ const rpc = BrowserView.defineRPC<GHDRpcSchema>({
           action: a.action,
           targetTitle: a.target_title,
           targetUrl: a.target_url,
+          body: a.body,
           eventTimestamp: a.event_timestamp,
         }));
         return result;

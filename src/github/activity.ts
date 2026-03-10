@@ -5,6 +5,7 @@ interface NormalizedActivity {
   action: ActivityAction;
   targetTitle: string;
   targetUrl: string | null;
+  body: string | null;
 }
 
 type EventHandler = (event: GitHubUserEvent) => NormalizedActivity | null;
@@ -15,6 +16,7 @@ function handlePushEvent(event: GitHubUserEvent): NormalizedActivity {
     action: "committed",
     targetTitle: firstCommit?.message ?? "Push",
     targetUrl: null,
+    body: null,
   };
 }
 
@@ -23,6 +25,7 @@ function handleIssueCommentEvent(event: GitHubUserEvent): NormalizedActivity {
     action: "commented",
     targetTitle: event.payload.issue?.title ?? "Comment",
     targetUrl: event.payload.comment?.html_url ?? null,
+    body: event.payload.comment?.body ?? null,
   };
 }
 
@@ -34,6 +37,7 @@ function handlePullRequestEvent(event: GitHubUserEvent): NormalizedActivity | nu
     action,
     targetTitle: pr?.title ?? "Pull Request",
     targetUrl: pr?.html_url ?? null,
+    body: null,
   };
 }
 
@@ -42,6 +46,7 @@ function handlePullRequestReviewEvent(event: GitHubUserEvent): NormalizedActivit
     action: "reviewed",
     targetTitle: event.payload.pull_request?.title ?? "Review",
     targetUrl: event.payload.pull_request?.html_url ?? null,
+    body: null,
   };
 }
 
@@ -52,6 +57,7 @@ function handleIssuesEvent(event: GitHubUserEvent): NormalizedActivity | null {
     action,
     targetTitle: event.payload.issue?.title ?? "Issue",
     targetUrl: event.payload.issue?.html_url ?? null,
+    body: null,
   };
 }
 
@@ -62,6 +68,7 @@ function handleCreateEvent(event: GitHubUserEvent): NormalizedActivity {
       ? `${event.payload.ref_type ?? "ref"}: ${event.payload.ref}`
       : (event.payload.ref_type ?? "repository"),
     targetUrl: null,
+    body: null,
   };
 }
 
@@ -72,6 +79,7 @@ function handleDeleteEvent(event: GitHubUserEvent): NormalizedActivity {
       ? `${event.payload.ref_type ?? "ref"}: ${event.payload.ref}`
       : (event.payload.ref_type ?? "ref"),
     targetUrl: null,
+    body: null,
   };
 }
 
@@ -80,6 +88,7 @@ function handleForkEvent(event: GitHubUserEvent): NormalizedActivity {
     action: "forked",
     targetTitle: event.payload.forkee?.full_name ?? "Fork",
     targetUrl: event.payload.forkee?.html_url ?? null,
+    body: null,
   };
 }
 
@@ -88,6 +97,7 @@ function handleWatchEvent(event: GitHubUserEvent): NormalizedActivity {
     action: "starred",
     targetTitle: event.repo.name,
     targetUrl: null,
+    body: null,
   };
 }
 
@@ -96,6 +106,7 @@ function handleReleaseEvent(event: GitHubUserEvent): NormalizedActivity {
     action: "released",
     targetTitle: event.payload.release?.tag_name ?? "Release",
     targetUrl: event.payload.release?.html_url ?? null,
+    body: null,
   };
 }
 

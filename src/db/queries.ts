@@ -125,6 +125,13 @@ export class GHDDatabase {
     );
   }
 
+  updateDescriptionBody(threadId: ThreadId, body: string | null): void {
+    this.db.run(
+      "UPDATE notifications SET description_body = ?2, updated_at = datetime('now') WHERE thread_id = ?1",
+      [threadId, body],
+    );
+  }
+
   updateEventSummary(threadId: ThreadId, eventId: EventId, summary: string): void {
     this.db.run(
       "UPDATE notification_events SET summary = ?3 WHERE notification_thread_id = ?1 AND event_id = ?2",
@@ -137,8 +144,8 @@ export class GHDDatabase {
   upsertActivity(input: UpsertActivityInput): void {
     this.db.run(
       `INSERT INTO activity (
-        event_id, event_type, repository, action, target_title, target_url, event_timestamp
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        event_id, event_type, repository, action, target_title, target_url, body, event_timestamp
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
       ON CONFLICT(event_id) DO NOTHING`,
       [
         input.eventId,
@@ -147,6 +154,7 @@ export class GHDDatabase {
         input.action,
         input.targetTitle,
         input.targetUrl,
+        input.body,
         input.eventTimestamp,
       ],
     );

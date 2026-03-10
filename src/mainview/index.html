@@ -15,17 +15,21 @@
     </nav>
   </header>
 
-  <main id="content">
-    <div id="preview-box" class="preview-box hidden"></div>
-    <section id="tab-notifications" class="tab-panel active">
-      <p class="placeholder">Notifications will appear here.</p>
-    </section>
-    <section id="tab-pinned" class="tab-panel">
-      <p class="placeholder">Pinned items will appear here.</p>
-    </section>
-    <section id="tab-activity" class="tab-panel">
-      <p class="placeholder">Activity feed will appear here.</p>
-    </section>
+  <main id="app-body">
+    <div id="content">
+      <section id="tab-notifications" class="tab-panel active">
+        <p class="placeholder">Notifications will appear here.</p>
+      </section>
+      <section id="tab-pinned" class="tab-panel">
+        <p class="placeholder">Pinned items will appear here.</p>
+      </section>
+      <section id="tab-activity" class="tab-panel">
+        <p class="placeholder">Activity feed will appear here.</p>
+      </section>
+    </div>
+    <aside id="sidebar" class="sidebar hidden">
+      <div id="sidebar-content"></div>
+    </aside>
   </main>
 
   <script src="index.js"></script>

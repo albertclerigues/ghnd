@@ -81,14 +81,32 @@ describe("FocusManager", () => {
     expect(fm.getState().eventIndex).toBe(2);
   });
 
-  test("moveDown at last event stays", () => {
+  test("moveDown at last event jumps to next notification", () => {
     const fm = new FocusManager();
     fm.updateCounts(2, [2, 1]);
     fm.moveDown(); // notification 0
     fm.moveRight(); // event 0
     fm.moveDown(); // event 1
-    fm.moveDown(); // still event 1
-    expect(fm.getState().eventIndex).toBe(1);
+    fm.moveDown(); // jump to notification 1
+    const state = fm.getState();
+    expect(state.notificationIndex).toBe(1);
+    expect(state.inSubItems).toBe(false);
+    expect(state.eventIndex).toBe(-1);
+  });
+
+  test("moveDown at last event of last notification stays", () => {
+    const fm = new FocusManager();
+    fm.updateCounts(2, [2, 3]);
+    fm.moveDown(); // notification 0
+    fm.moveDown(); // notification 1
+    fm.moveRight(); // event 0
+    fm.moveDown(); // event 1
+    fm.moveDown(); // event 2
+    fm.moveDown(); // last event of last notification — stay
+    const state = fm.getState();
+    expect(state.notificationIndex).toBe(1);
+    expect(state.inSubItems).toBe(true);
+    expect(state.eventIndex).toBe(2);
   });
 
   test("moveUp in sub-items goes back to notification header", () => {

@@ -260,6 +260,7 @@ describe("GHDDatabase — Activity", () => {
       action: "committed",
       targetTitle: "Fix typo",
       targetUrl: null,
+      body: null,
       eventTimestamp: "2026-03-10T00:00:00Z",
     });
 
@@ -280,6 +281,7 @@ describe("GHDDatabase — Activity", () => {
       action: "committed",
       targetTitle: "First",
       targetUrl: null,
+      body: null,
       eventTimestamp: "2026-03-10T00:00:00Z",
     });
 
@@ -290,6 +292,7 @@ describe("GHDDatabase — Activity", () => {
       action: "committed",
       targetTitle: "Second",
       targetUrl: null,
+      body: null,
       eventTimestamp: "2026-03-10T00:00:00Z",
     });
 
@@ -309,6 +312,7 @@ describe("GHDDatabase — Activity", () => {
         action: "committed",
         targetTitle: `Commit ${String(i)}`,
         targetUrl: null,
+        body: null,
         eventTimestamp: `2026-03-10T0${String(i)}:00:00Z`,
       });
     }
@@ -327,6 +331,7 @@ describe("GHDDatabase — Activity", () => {
       action: "committed",
       targetTitle: "Old commit",
       targetUrl: null,
+      body: null,
       eventTimestamp: "2020-01-01T00:00:00Z",
     });
 
@@ -337,6 +342,7 @@ describe("GHDDatabase — Activity", () => {
       action: "committed",
       targetTitle: "New commit",
       targetUrl: null,
+      body: null,
       eventTimestamp: "2026-03-10T00:00:00Z",
     });
 

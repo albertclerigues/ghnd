@@ -11,6 +11,7 @@ export interface NotificationWithEvents {
   unread: boolean;
   githubUpdatedAt: string;
   descriptionSummary: string | null;
+  descriptionBody: string | null;
   events: NotificationEventData[];
 }
 
@@ -45,6 +46,7 @@ export interface ActivityData {
   action: string;
   targetTitle: string;
   targetUrl: string | null;
+  body: string | null;
   eventTimestamp: string;
 }
 

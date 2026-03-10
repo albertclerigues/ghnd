@@ -109,4 +109,18 @@ export const MIGRATIONS: readonly Migration[] = [
       ALTER TABLE notifications ADD COLUMN description_summary TEXT;
     `,
   },
+  {
+    version: 7,
+    name: "add_description_body",
+    sql: `
+      ALTER TABLE notifications ADD COLUMN description_body TEXT;
+    `,
+  },
+  {
+    version: 8,
+    name: "add_activity_body",
+    sql: `
+      ALTER TABLE activity ADD COLUMN body TEXT;
+    `,
+  },
 ] as const;

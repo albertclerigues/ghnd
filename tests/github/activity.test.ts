@@ -24,6 +24,7 @@ describe("normalizeUserEvent", () => {
       action: "committed",
       targetTitle: "Fix bug",
       targetUrl: null,
+      body: null,
     });
   });
 
@@ -34,12 +35,30 @@ describe("normalizeUserEvent", () => {
         payload: {
           action: "created",
           issue: { title: "Bug report", html_url: "https://github.com/owner/repo/issues/1" },
-          comment: { html_url: "https://github.com/owner/repo/issues/1#issuecomment-1" },
+          comment: {
+            html_url: "https://github.com/owner/repo/issues/1#issuecomment-1",
+            body: "This is a comment body",
+          },
         },
       }),
     );
     expect(result?.action).toBe("commented");
     expect(result?.targetTitle).toBe("Bug report");
+    expect(result?.body).toBe("This is a comment body");
+  });
+
+  it("handles IssueCommentEvent without body", () => {
+    const result = normalizeUserEvent(
+      makeEvent({
+        type: "IssueCommentEvent",
+        payload: {
+          action: "created",
+          issue: { title: "Bug report", html_url: "https://github.com/owner/repo/issues/1" },
+          comment: { html_url: "https://github.com/owner/repo/issues/1#issuecomment-1" },
+        },
+      }),
+    );
+    expect(result?.body).toBeNull();
   });
 
   it("handles PullRequestEvent — opened", () => {

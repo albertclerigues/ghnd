@@ -116,6 +116,42 @@ describe("NotificationPoller", () => {
     db.close();
   });
 
+  it("poll() stores description body from issue details", async () => {
+    const { db, poller } = setup();
+    await poller.poll();
+
+    const notifications = db.getNotifications();
+    const issue = notifications.find((n) => n.thread_id === "1234567890");
+    expect(issue?.description_body).toContain("dark mode");
+
+    const pr = notifications.find((n) => n.thread_id === "1234567891");
+    expect(pr?.description_body).toContain("LRU cache");
+    db.close();
+  });
+
+  it("poll() stores assignee info in event body", async () => {
+    const { db, poller } = setup();
+    await poller.poll();
+
+    const events = db.getNotificationEvents(threadId("1234567890"));
+    const assignmentEvents = events.filter((e) => e.event_type === "assignment");
+    expect(assignmentEvents.length).toBe(2);
+    expect(assignmentEvents[0]?.body).toBe("assigned @alice");
+    expect(assignmentEvents[1]?.body).toBe("assigned @carol");
+    db.close();
+  });
+
+  it("poll() stores label info in event body", async () => {
+    const { db, poller } = setup();
+    await poller.poll();
+
+    const events = db.getNotificationEvents(threadId("1234567890"));
+    const labelEvents = events.filter((e) => e.event_type === "label");
+    expect(labelEvents.length).toBe(1);
+    expect(labelEvents[0]?.body).toBe("added bug");
+    db.close();
+  });
+
   it("poll() with failing summarizer still stores notifications and events", async () => {
     const failingSummarizer: Summarizer = {
       async summarize() {

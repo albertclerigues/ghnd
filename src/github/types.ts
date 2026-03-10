@@ -31,6 +31,8 @@ export interface GitHubTimelineEvent {
   html_url?: string | null;
   created_at?: string;
   submitted_at?: string; // used by review events
+  assignee?: { login: string } | null; // for assigned/unassigned events
+  label?: { name: string } | null; // for labeled/unlabeled events
 }
 
 // --- User Event (GET /users/{username}/events) ---
@@ -44,7 +46,7 @@ export interface GitHubUserEvent {
     action?: string; // "opened", "closed", "created", etc.
     pull_request?: { title: string; html_url: string; merged?: boolean };
     issue?: { title: string; html_url: string };
-    comment?: { html_url: string };
+    comment?: { html_url: string; body?: string };
     commits?: Array<{ message: string }>;
     ref?: string;
     ref_type?: string;
