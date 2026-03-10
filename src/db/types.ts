@@ -33,6 +33,7 @@ export interface NotificationRow {
   github_updated_at: string;
   github_last_read_at: string | null;
   dismissed_at: string | null;
+  description_summary: string | null;
   created_at: string;
   updated_at: string;
 }

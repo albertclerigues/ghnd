@@ -1,0 +1,7 @@
+{
+  "number": 42,
+  "title": "Fix widget rendering in dark mode",
+  "body": "The widget component renders incorrectly when dark mode is enabled. The background color is not applied to the inner container.\n\nSteps to reproduce:\n1. Enable dark mode\n2. Open the widget panel\n3. Observe the white background on inner elements",
+  "user": { "login": "octocat" },
+  "html_url": "https://github.com/acme/project/issues/42"
+}

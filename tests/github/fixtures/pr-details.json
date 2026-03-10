@@ -1,0 +1,7 @@
+{
+  "number": 99,
+  "title": "Add caching layer for API responses",
+  "body": "This PR adds a caching layer using an LRU cache for GitHub API responses to reduce rate limit consumption.\n\nChanges:\n- Added LRUCache class\n- Wrapped fetch calls with cache check\n- Added TTL configuration",
+  "user": { "login": "developer" },
+  "html_url": "https://github.com/acme/project/pull/99"
+}

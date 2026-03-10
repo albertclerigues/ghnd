@@ -54,6 +54,17 @@ export interface GitHubUserEvent {
   created_at: string;
 }
 
+// --- Issue Details (GET /repos/{owner}/{repo}/issues/{number}) ---
+export interface GitHubIssueDetails {
+  number: number;
+  title: string;
+  body: string | null;
+  user: {
+    login: string;
+  } | null;
+  html_url: string;
+}
+
 // --- Rate Limit Info ---
 export interface RateLimitInfo {
   remaining: number;

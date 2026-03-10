@@ -19,6 +19,7 @@
     "postinstall": "lefthook install"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "electrobun": "1.15.1"
   },
   "devDependencies": {

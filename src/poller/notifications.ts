@@ -1,15 +1,18 @@
 import type { GHDDatabase } from "../db/queries.js";
+import type { EventId, ThreadId } from "../db/types.js";
 import { eventId, threadId } from "../db/types.js";
 import type { GitHubClient } from "../github/client.js";
 import { extractActor, extractEventId, extractTimestamp, mapEventType } from "../github/events.js";
 import { apiUrlToHtmlUrl, parseSubjectUrl } from "../github/urls.js";
+import type { Summarizer } from "../summarizer/types.js";
 
 const SYNC_KEY = "notifications_last_poll";
 const DEFAULT_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
 export interface NotificationPollerOptions {
-  intervalMs?: number;
-  onSync?: () => void;
+  intervalMs?: number | undefined;
+  onSync?: (() => void) | undefined;
+  summarizer?: Summarizer | undefined;
 }
 
 export class NotificationPoller {
@@ -17,6 +20,7 @@ export class NotificationPoller {
   private running = false;
   private readonly intervalMs: number;
   private readonly onSync: (() => void) | undefined;
+  private readonly summarizer: Summarizer | undefined;
 
   constructor(
     private readonly db: GHDDatabase,
@@ -25,6 +29,7 @@ export class NotificationPoller {
   ) {
     this.intervalMs = options?.intervalMs ?? DEFAULT_INTERVAL_MS;
     this.onSync = options?.onSync;
+    this.summarizer = options?.summarizer;
   }
 
   start(): void {
@@ -105,28 +110,77 @@ export class NotificationPoller {
   }
 
   private async fetchAndStoreTimeline(
-    tid: import("../db/types.js").ThreadId,
+    tid: ThreadId,
     owner: string,
     repo: string,
     issueNumber: number,
   ): Promise<void> {
     const events = await this.github.getTimelineEvents(owner, repo, issueNumber);
 
+    const commentEvents: Array<{ eventId: EventId; body: string }> = [];
+
     for (const event of events) {
       const mappedType = mapEventType(event.event);
-      if (!mappedType) continue; // Skip event types we don't track
+      if (!mappedType) continue;
 
       const eid = eventId(extractEventId(event));
+      const body = event.body ?? null;
+
       this.db.upsertNotificationEvent({
         notificationThreadId: tid,
         eventId: eid,
         eventType: mappedType,
         actor: extractActor(event),
-        body: event.body ?? null,
-        summary: null, // Phase 4: LLM summarization
+        body,
+        summary: null,
         url: event.html_url ?? null,
         eventTimestamp: extractTimestamp(event),
       });
+
+      if (mappedType === "comment" && body) {
+        commentEvents.push({ eventId: eid, body });
+      }
+    }
+
+    if (this.summarizer) {
+      void this.summarizeThread(tid, owner, repo, issueNumber, commentEvents);
+    }
+  }
+
+  private async summarizeThread(
+    tid: ThreadId,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    commentEvents: Array<{ eventId: EventId; body: string }>,
+  ): Promise<void> {
+    try {
+      const issueDetails = await this.github.getIssueDetails(owner, repo, issueNumber);
+
+      const content = {
+        description: issueDetails.body ?? "",
+        comments: commentEvents.map((c, i) => ({
+          number: i + 1,
+          body: c.body,
+        })),
+      };
+
+      // biome-ignore lint/style/noNonNullAssertion: summarizer is checked before calling this method
+      const result = await this.summarizer!.summarize(content);
+
+      this.db.updateDescriptionSummary(tid, result.descriptionSummary);
+
+      for (const commentSummary of result.comments) {
+        const idx = commentSummary.commentNumber - 1;
+        const event = commentEvents[idx];
+        if (event) {
+          this.db.updateEventSummary(tid, event.eventId, commentSummary.summary);
+        }
+      }
+
+      this.onSync?.();
+    } catch (err) {
+      console.error(`[ghd] Summarization failed for thread ${String(tid)}:`, err);
     }
   }
 }

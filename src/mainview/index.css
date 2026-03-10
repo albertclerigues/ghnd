@@ -131,6 +131,14 @@ body {
   text-align: right;
 }
 
+.notification-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding-left: 28px;
+  margin-top: 2px;
+}
+
 /* Event tree */
 
 .event-tree {
@@ -171,7 +179,7 @@ body {
 
 .event-summary {
   font-size: 12px;
-  color: var(--text);
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -291,4 +299,65 @@ body {
 .activity-time {
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* --- Focus styles --- */
+
+.notification-block.focused {
+  background: var(--surface);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.event-line.focused {
+  background: var(--surface);
+  border-radius: 4px;
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* --- Preview Box --- */
+
+.preview-box {
+  position: fixed;
+  top: calc(var(--titlebar-height) + 12px);
+  right: 16px;
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.preview-box.hidden {
+  display: none;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.preview-title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-repo {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.preview-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
 }

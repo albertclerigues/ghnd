@@ -1,4 +1,4 @@
-import { BrowserView, BrowserWindow } from "electrobun";
+import { BrowserView, BrowserWindow, Utils } from "electrobun";
 import { createDatabase } from "../db/client.js";
 import { GHDDatabase } from "../db/queries.js";
 import type { ThreadId } from "../db/types.js";
@@ -13,10 +13,14 @@ import type {
   NotificationWithEvents,
   PinnedGroupData,
 } from "../shared/rpc.js";
+import { ClaudeCliSummarizer } from "../summarizer/claude-cli.js";
 
 // Initialize the database
 const rawDb = createDatabase();
 const db = new GHDDatabase(rawDb);
+
+// Module-level GitHub client reference (assigned after async init)
+let githubClient: FetchGitHubClient | undefined;
 
 // Define RPC handlers
 // Electrobun's RPCRequestHandler intersection with BaseRPCRequestsSchema
@@ -38,6 +42,7 @@ const rpc = BrowserView.defineRPC<GHDRpcSchema>({
           reason: n.reason,
           unread: n.unread === 1,
           githubUpdatedAt: n.github_updated_at,
+          descriptionSummary: n.description_summary,
           events: db.getNotificationEvents(threadId(n.thread_id)).map((e) => ({
             eventId: e.event_id,
             eventType: e.event_type,
@@ -86,6 +91,10 @@ const rpc = BrowserView.defineRPC<GHDRpcSchema>({
 
       markDone: ({ threadId: tid }) => {
         db.dismissNotification(threadId(tid));
+        // Also mark as read on GitHub (fire-and-forget)
+        void githubClient?.markThreadAsRead(tid).catch((err) => {
+          console.error("[ghd] Failed to mark thread as read:", err);
+        });
         win.webview.rpc?.send("stateUpdated", { scope: "notifications" });
         return undefined;
       },
@@ -115,6 +124,17 @@ const rpc = BrowserView.defineRPC<GHDRpcSchema>({
         return { id: id as number };
       },
 
+      openInBrowser: ({ url, threadId: tid }) => {
+        Utils.openExternal(url);
+        if (tid) {
+          // Mark as read on GitHub (fire-and-forget)
+          void githubClient?.markThreadAsRead(tid).catch((err) => {
+            console.error("[ghd] Failed to mark thread as read:", err);
+          });
+        }
+        return undefined;
+      },
+
       unpinItem: ({ id }) => {
         db.unpinItem(pinId(id));
         win.webview.rpc?.send("stateUpdated", { scope: "pinned" });
@@ -139,9 +159,13 @@ void (async () => {
   try {
     const token = await resolveGitHubToken();
     const github = new FetchGitHubClient(token);
+    githubClient = github;
     const username = await resolveGitHubUsername(token);
 
+    const summarizer = new ClaudeCliSummarizer();
+
     const notificationPoller = new NotificationPoller(db, github, {
+      summarizer,
       onSync: () => {
         win.webview.rpc?.send("stateUpdated", { scope: "notifications" });
       },

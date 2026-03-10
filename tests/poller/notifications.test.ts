@@ -3,13 +3,17 @@ import { createMemoryDatabase } from "../../src/db/client.js";
 import { GHDDatabase } from "../../src/db/queries.js";
 import { threadId } from "../../src/db/types.js";
 import { NotificationPoller } from "../../src/poller/notifications.js";
+import { StubSummarizer } from "../../src/summarizer/stub.js";
+import type { Summarizer } from "../../src/summarizer/types.js";
 import { FixtureGitHubClient } from "../helpers/github.js";
 
-function setup() {
+function setup(options?: { summarizer?: Summarizer }) {
   const rawDb = createMemoryDatabase();
   const db = new GHDDatabase(rawDb);
   const github = new FixtureGitHubClient();
-  const poller = new NotificationPoller(db, github);
+  const poller = new NotificationPoller(db, github, {
+    summarizer: options?.summarizer,
+  });
   return { db, github, poller };
 }
 
@@ -65,6 +69,68 @@ describe("NotificationPoller", () => {
     const eventTypes = issueEvents.map((e) => e.event_type);
     expect(eventTypes).toContain("comment");
     expect(eventTypes).toContain("label");
+    db.close();
+  });
+
+  it("poll() with summarizer populates description_summary", async () => {
+    const stub = new StubSummarizer();
+    const { db, poller } = setup({ summarizer: stub });
+    await poller.poll();
+
+    // Wait for async summarization to complete
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
+
+    const notifications = db.getNotifications();
+    const withSummary = notifications.filter((n) => n.description_summary !== null);
+    expect(withSummary.length).toBeGreaterThan(0);
+    expect(stub.calls.length).toBeGreaterThan(0);
+    db.close();
+  });
+
+  it("poll() with summarizer populates event summaries on comment events", async () => {
+    const stub = new StubSummarizer();
+    const { db, poller } = setup({ summarizer: stub });
+    await poller.poll();
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
+
+    const events = db.getNotificationEvents(threadId("1234567890"));
+    const commentEvents = events.filter((e) => e.event_type === "comment");
+    const withSummary = commentEvents.filter((e) => e.summary !== null);
+    expect(withSummary.length).toBeGreaterThan(0);
+    db.close();
+  });
+
+  it("poll() without summarizer leaves summaries as null", async () => {
+    const { db, poller } = setup();
+    await poller.poll();
+
+    const notifications = db.getNotifications();
+    for (const n of notifications) {
+      expect(n.description_summary).toBeNull();
+    }
+    db.close();
+  });
+
+  it("poll() with failing summarizer still stores notifications and events", async () => {
+    const failingSummarizer: Summarizer = {
+      async summarize() {
+        throw new Error("API unavailable");
+      },
+    };
+    const { db, poller } = setup({ summarizer: failingSummarizer });
+    await poller.poll();
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
+
+    const notifications = db.getNotifications();
+    expect(notifications.length).toBe(2);
     db.close();
   });
 });

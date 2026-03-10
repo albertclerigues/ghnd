@@ -1,4 +1,5 @@
 import type {
+  GitHubIssueDetails,
   GitHubNotificationThread,
   GitHubTimelineEvent,
   GitHubUserEvent,
@@ -24,6 +25,8 @@ export interface GitHubClient {
   ): Promise<GitHubTimelineEvent[]>;
 
   listUserEvents(username: string): Promise<GitHubUserEvent[]>;
+
+  getIssueDetails(owner: string, repo: string, issueNumber: number): Promise<GitHubIssueDetails>;
 
   markThreadAsRead(threadId: string): Promise<void>;
 
@@ -61,6 +64,14 @@ export class FetchGitHubClient implements GitHubClient {
     return this.paginatedGet<GitHubTimelineEvent>(
       `/repos/${owner}/${repo}/issues/${String(issueNumber)}/timeline`,
     );
+  }
+
+  async getIssueDetails(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+  ): Promise<GitHubIssueDetails> {
+    return this.get<GitHubIssueDetails>(`/repos/${owner}/${repo}/issues/${String(issueNumber)}`);
   }
 
   async listUserEvents(username: string): Promise<GitHubUserEvent[]> {

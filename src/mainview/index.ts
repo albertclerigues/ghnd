@@ -5,6 +5,7 @@ import type {
   NotificationWithEvents,
   PinnedGroupData,
 } from "../shared/rpc.js";
+import { FocusManager } from "./focus.js";
 import { actionColor, eventTypeLabel, relativeTime, subjectTypeIcon } from "./format.js";
 
 // --- RPC Setup ---
@@ -22,6 +23,11 @@ const rpc = Electroview.defineRPC<GHDRpcSchema>({
 });
 
 const _view = new Electroview({ rpc });
+
+// --- Focus Management ---
+
+const focusManager = new FocusManager();
+let currentNotifications: NotificationWithEvents[] = [];
 
 // --- Tab Management ---
 
@@ -98,6 +104,13 @@ function renderNotificationBlock(notif: NotificationWithEvents): HTMLDivElement 
   `;
   block.appendChild(header);
 
+  if (notif.descriptionSummary) {
+    const summaryLine = document.createElement("div");
+    summaryLine.className = "notification-summary";
+    summaryLine.innerHTML = `✨ ${escapeHtml(notif.descriptionSummary)}`;
+    block.appendChild(summaryLine);
+  }
+
   if (notif.events.length > 0) {
     block.appendChild(renderEventTree(notif.events));
   }
@@ -117,6 +130,9 @@ function renderEventTree(events: NotificationWithEvents["events"]): HTMLDivEleme
 
     const line = document.createElement("div");
     line.className = "event-line";
+    if (event.url) {
+      line.dataset["eventUrl"] = event.url;
+    }
 
     let summaryHtml = "";
     if (event.summary) {
@@ -140,16 +156,24 @@ function renderNotifications(data: NotificationWithEvents[]): void {
   const container = document.getElementById("tab-notifications");
   if (!container) return;
 
+  currentNotifications = data;
+
   if (data.length === 0) {
     container.innerHTML = '<p class="placeholder">No notifications.</p>';
+    focusManager.updateCounts(0, []);
     return;
   }
 
   container.innerHTML = "";
+  const eventCounts: number[] = [];
 
   for (const notif of data) {
     container.appendChild(renderNotificationBlock(notif));
+    eventCounts.push(notif.events.length);
   }
+
+  focusManager.updateCounts(data.length, eventCounts);
+  applyFocusStyles();
 }
 
 function renderPinned(data: PinnedGroupData[]): void {
@@ -241,6 +265,175 @@ function renderActivity(data: ActivityData[]): void {
   container.innerHTML = "";
   container.appendChild(table);
 }
+
+// --- Focus Styles ---
+
+function applyFocusStyles(): void {
+  const state = focusManager.getState();
+  const container = document.getElementById("tab-notifications");
+  if (!container) return;
+
+  // Remove all existing focus styles
+  for (const el of container.querySelectorAll(".focused")) {
+    el.classList.remove("focused");
+  }
+
+  if (state.notificationIndex === -1) {
+    hidePreviewBox();
+    return;
+  }
+
+  const blocks = container.querySelectorAll<HTMLElement>(".notification-block");
+  const block = blocks[state.notificationIndex];
+  if (!block) return;
+
+  if (state.inSubItems) {
+    // Focus a specific event line
+    const eventLines = block.querySelectorAll<HTMLElement>(".event-line");
+    const eventLine = eventLines[state.eventIndex];
+    if (eventLine) {
+      eventLine.classList.add("focused");
+      eventLine.scrollIntoView({ block: "nearest" });
+    }
+    showPreviewBox(state.notificationIndex);
+  } else {
+    // Focus the notification block
+    block.classList.add("focused");
+    block.scrollIntoView({ block: "nearest" });
+    hidePreviewBox();
+  }
+}
+
+focusManager.setOnChange(() => applyFocusStyles());
+
+// --- Preview Box ---
+
+function showPreviewBox(notificationIndex: number): void {
+  const box = document.getElementById("preview-box");
+  if (!box) return;
+
+  const notif = currentNotifications[notificationIndex];
+  if (!notif) {
+    hidePreviewBox();
+    return;
+  }
+
+  let summaryHtml = "";
+  const summary = (notif as NotificationWithEvents & { descriptionSummary?: string })
+    .descriptionSummary;
+  if (summary) {
+    summaryHtml = `<div class="preview-summary">\u2728 ${escapeHtml(summary)}</div>`;
+  }
+
+  box.innerHTML = `
+    <div class="preview-header">
+      <span class="notification-icon">${subjectTypeIcon(notif.subjectType)}</span>
+      <span class="preview-title">${escapeHtml(notif.subjectTitle)}</span>
+    </div>
+    <div class="preview-repo">${escapeHtml(notif.repository)}</div>
+    ${summaryHtml}
+  `;
+  box.classList.remove("hidden");
+}
+
+function hidePreviewBox(): void {
+  const box = document.getElementById("preview-box");
+  if (box) {
+    box.classList.add("hidden");
+  }
+}
+
+// --- Keyboard Navigation ---
+
+function isNotificationsActive(): boolean {
+  return (
+    document.querySelector('.tab[data-tab="notifications"]')?.classList.contains("active") ?? false
+  );
+}
+
+function switchToTab(tabName: string): void {
+  const tab = document.querySelector<HTMLButtonElement>(`.tab[data-tab="${tabName}"]`);
+  tab?.click();
+}
+
+function handleEnter(): void {
+  const state = focusManager.getState();
+  if (state.notificationIndex === -1) return;
+
+  const notif = currentNotifications[state.notificationIndex];
+  if (!notif) return;
+
+  if (state.inSubItems) {
+    // Open the specific event URL
+    const event = notif.events[state.eventIndex];
+    const url = event?.url ?? notif.subjectUrl;
+    if (url) {
+      void rpc.request("openInBrowser", { url, threadId: notif.threadId });
+    }
+  } else {
+    // Open the notification's subject URL
+    if (notif.subjectUrl) {
+      void rpc.request("openInBrowser", { url: notif.subjectUrl, threadId: notif.threadId });
+    }
+  }
+}
+
+function handleSpace(): void {
+  const state = focusManager.getState();
+  if (state.notificationIndex === -1) return;
+
+  const notif = currentNotifications[state.notificationIndex];
+  if (!notif) return;
+
+  // Mark as done — the stateUpdated push will trigger a re-render
+  void rpc.request("markDone", { threadId: notif.threadId });
+}
+
+document.addEventListener("keydown", (e: KeyboardEvent) => {
+  // Tab switching: 1/2/3
+  if (e.key === "1") {
+    switchToTab("notifications");
+    return;
+  }
+  if (e.key === "2") {
+    switchToTab("pinned");
+    return;
+  }
+  if (e.key === "3") {
+    switchToTab("activity");
+    return;
+  }
+
+  // All other keys only work on notifications tab
+  if (!isNotificationsActive()) return;
+
+  switch (e.key) {
+    case "ArrowUp":
+      e.preventDefault();
+      focusManager.moveUp();
+      break;
+    case "ArrowDown":
+      e.preventDefault();
+      focusManager.moveDown();
+      break;
+    case "ArrowRight":
+      e.preventDefault();
+      focusManager.moveRight();
+      break;
+    case "ArrowLeft":
+      e.preventDefault();
+      focusManager.moveLeft();
+      break;
+    case "Enter":
+      e.preventDefault();
+      handleEnter();
+      break;
+    case " ":
+      e.preventDefault();
+      handleSpace();
+      break;
+  }
+});
 
 // --- Init ---
 

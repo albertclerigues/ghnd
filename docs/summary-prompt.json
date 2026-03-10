@@ -1,0 +1,43 @@
+{
+  "system_prompt": "You are a structured data extractor for a medical device startup's GitHub issues. The team builds AI-assisted neurological diagnostic software (MS lesion detection, brain volumetry, brain metastasis). Issues span engineering, regulatory (IFU, FMEA, CE marking), research (ML experiments, clinical validation), business (hospital outreach, conferences), and coordination. Extract information precisely. Never hallucinate. Be concise and maximize information density. Use active voice. Quote metrics, code snippets, and technical terms when relevant.",
+  "user_prompt_template": "The following text was parsed from a GitHub issue/PR/discussion and its comments.\n\n---\n{content}\n---\n\nSummarize the description and each comment. Rules:\n- description_summary: One sentence, max 10 words. Capture the core purpose. Active voice, no filler.\n- comments: One summary per comment, in order. Max 10 words each. Focus on the content: decisions, action items, technical details, metrics. Quote code or numbers when relevant. Skip pleasantries.\n\nRespond with valid JSON matching the provided schema.",
+  "json_schema": {
+    "name": "github_issue_summary",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "required": [
+        "description_summary",
+        "comments"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description_summary": {
+          "type": "string",
+          "description": "One-sentence summary of the issue/PR/discussion description, max 10 words."
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "comment_number",
+              "summary"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "comment_number": {
+                "type": "integer",
+                "description": "The sequential comment number as provided in the input."
+              },
+              "summary": {
+                "type": "string",
+                "description": "One-sentence summary of this comment, max 10 words."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

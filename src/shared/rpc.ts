@@ -10,6 +10,7 @@ export interface NotificationWithEvents {
   reason: string;
   unread: boolean;
   githubUpdatedAt: string;
+  descriptionSummary: string | null;
   events: NotificationEventData[];
 }
 
@@ -66,6 +67,10 @@ export type GHDRpcSchema = ElectrobunRPCSchema & {
       };
       markDone: {
         params: { threadId: string };
+        response: undefined;
+      };
+      openInBrowser: {
+        params: { url: string; threadId?: string };
         response: undefined;
       };
       pinItem: {

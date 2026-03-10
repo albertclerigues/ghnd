@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import type {
   ActivityRow,
+  EventId,
   NotificationEventRow,
   NotificationRow,
   PinId,
@@ -115,6 +116,20 @@ export class GHDDatabase {
         "SELECT * FROM notification_events WHERE notification_thread_id = ?1 ORDER BY event_timestamp ASC",
       )
       .all(threadId);
+  }
+
+  updateDescriptionSummary(threadId: ThreadId, summary: string): void {
+    this.db.run(
+      "UPDATE notifications SET description_summary = ?2, updated_at = datetime('now') WHERE thread_id = ?1",
+      [threadId, summary],
+    );
+  }
+
+  updateEventSummary(threadId: ThreadId, eventId: EventId, summary: string): void {
+    this.db.run(
+      "UPDATE notification_events SET summary = ?3 WHERE notification_thread_id = ?1 AND event_id = ?2",
+      [threadId, eventId, summary],
+    );
   }
 
   // --- Activity ---

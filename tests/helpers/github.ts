@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { GitHubClient } from "../../src/github/client.js";
 import type {
+  GitHubIssueDetails,
   GitHubNotificationThread,
   GitHubTimelineEvent,
   GitHubUserEvent,
@@ -25,6 +26,7 @@ function loadFixture<T>(name: string): T {
 export class FixtureGitHubClient implements GitHubClient {
   private notifications: GitHubNotificationThread[];
   private timelines: Map<string, GitHubTimelineEvent[]>;
+  private issueDetails: Map<string, GitHubIssueDetails>;
   private userEvents: GitHubUserEvent[];
   private markedAsRead: Set<string> = new Set();
 
@@ -33,6 +35,10 @@ export class FixtureGitHubClient implements GitHubClient {
     this.timelines = new Map([
       ["acme/project/42", loadFixture<GitHubTimelineEvent[]>("timeline-issue.json")],
       ["acme/project/99", loadFixture<GitHubTimelineEvent[]>("timeline-pr.json")],
+    ]);
+    this.issueDetails = new Map([
+      ["acme/project/42", loadFixture<GitHubIssueDetails>("issue-details.json")],
+      ["acme/project/99", loadFixture<GitHubIssueDetails>("pr-details.json")],
     ]);
     this.userEvents = loadFixture<GitHubUserEvent[]>("user-events.json");
   }
@@ -56,6 +62,19 @@ export class FixtureGitHubClient implements GitHubClient {
   ): Promise<GitHubTimelineEvent[]> {
     const key = `${owner}/${repo}/${String(issueNumber)}`;
     return this.timelines.get(key) ?? [];
+  }
+
+  async getIssueDetails(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+  ): Promise<GitHubIssueDetails> {
+    const key = `${owner}/${repo}/${String(issueNumber)}`;
+    const details = this.issueDetails.get(key);
+    if (!details) {
+      throw new Error(`Fixture not found: ${key}`);
+    }
+    return details;
   }
 
   async listUserEvents(_username: string): Promise<GitHubUserEvent[]> {
