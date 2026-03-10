@@ -5,7 +5,7 @@
 output=$(tsc --noEmit 2>&1)
 
 # Extract only lines that are error locations (contain "error TS") and NOT in node_modules
-our_errors=$(echo "$output" | grep 'error TS' | grep -v '^node_modules/')
+our_errors=$(echo "$output" | grep 'error TS' | grep -v 'node_modules/')
 
 if [ -z "$our_errors" ]; then
   exit 0

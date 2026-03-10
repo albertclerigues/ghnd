@@ -81,3 +81,214 @@ body {
   text-align: center;
   padding-top: 40vh;
 }
+
+/* --- Notifications --- */
+
+.notification-block {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notification-block.unread {
+  border-left: 3px solid var(--accent);
+  padding-left: 9px;
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.notification-icon {
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.notification-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notification-repo {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.notification-time {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Event tree */
+
+.event-tree {
+  margin-top: 4px;
+  padding-left: 28px;
+}
+
+.event-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--text-muted);
+}
+
+.tree-connector {
+  font-family: monospace;
+  color: var(--border);
+  flex-shrink: 0;
+}
+
+.event-type {
+  color: var(--accent);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.event-actor {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.event-time {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.event-summary {
+  font-size: 12px;
+  color: var(--text);
+  font-style: italic;
+}
+
+/* --- Pinned --- */
+
+.pin-group {
+  margin-bottom: 24px;
+}
+
+.pin-group-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.pin-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pin-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pin-card-icon {
+  font-size: 14px;
+}
+
+.pin-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pin-card-repo {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pin-card-unpin {
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: not-allowed;
+}
+
+/* --- Activity --- */
+
+.activity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.activity-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.action-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bg);
+}
+
+.activity-target {
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-repo {
+  color: var(--text-muted);
+}
+
+.activity-time {
+  color: var(--text-muted);
+  white-space: nowrap;
+}

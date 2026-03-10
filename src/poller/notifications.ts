@@ -9,12 +9,14 @@ const DEFAULT_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
 export interface NotificationPollerOptions {
   intervalMs?: number;
+  onSync?: () => void;
 }
 
 export class NotificationPoller {
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
   private readonly intervalMs: number;
+  private readonly onSync: (() => void) | undefined;
 
   constructor(
     private readonly db: GHDDatabase,
@@ -22,6 +24,7 @@ export class NotificationPoller {
     options?: NotificationPollerOptions,
   ) {
     this.intervalMs = options?.intervalMs ?? DEFAULT_INTERVAL_MS;
+    this.onSync = options?.onSync;
   }
 
   start(): void {
@@ -61,6 +64,8 @@ export class NotificationPoller {
 
       // Update last poll timestamp
       this.db.setSyncMeta(SYNC_KEY, new Date().toISOString());
+
+      this.onSync?.();
 
       return { processed };
     } catch (err) {

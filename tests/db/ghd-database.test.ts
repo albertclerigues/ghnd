@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { createMemoryDatabase } from "../../src/db/client.js";
 import { GHDDatabase } from "../../src/db/queries.js";
-import { activityId, eventId, threadId } from "../../src/db/types.js";
+import { activityId, eventId, pinId, threadId } from "../../src/db/types.js";
 
 function createTestDb(): GHDDatabase {
   return new GHDDatabase(createMemoryDatabase());
@@ -344,6 +344,92 @@ describe("GHDDatabase — Activity", () => {
     expect(removed).toBe(1);
     expect(db.getActivity().length).toBe(1);
     expect(db.getActivity()[0]?.target_title).toBe("New commit");
+    db.close();
+  });
+});
+
+describe("GHDDatabase — Pinned", () => {
+  it("pinItem inserts a pin with default group", () => {
+    const db = createTestDb();
+    const id = db.pinItem({
+      subjectType: "Issue",
+      subjectTitle: "Bug report",
+      subjectUrl: "https://github.com/owner/repo/issues/1",
+      repository: "owner/repo",
+    });
+
+    const groups = db.getPinnedGrouped();
+    expect(groups.size).toBe(1);
+    expect(groups.has("Default")).toBe(true);
+    const items = groups.get("Default");
+    expect(items).toBeDefined();
+    expect(items?.length).toBe(1);
+    expect(items?.[0]?.subject_title).toBe("Bug report");
+    expect(items?.[0]?.id).toBe(id as number);
+    db.close();
+  });
+
+  it("pinItem with explicit group name", () => {
+    const db = createTestDb();
+    db.pinItem({
+      subjectType: "PullRequest",
+      subjectTitle: "Feature PR",
+      subjectUrl: "https://github.com/owner/repo/pull/2",
+      repository: "owner/repo",
+      groupName: "Watching",
+    });
+
+    const groups = db.getPinnedGrouped();
+    expect(groups.has("Watching")).toBe(true);
+    expect(groups.get("Watching")?.[0]?.subject_title).toBe("Feature PR");
+    db.close();
+  });
+
+  it("pinItem auto-increments sort order within a group", () => {
+    const db = createTestDb();
+    db.pinItem({
+      subjectType: "Issue",
+      subjectTitle: "First",
+      subjectUrl: "https://github.com/owner/repo/issues/1",
+      repository: "owner/repo",
+      groupName: "MyGroup",
+    });
+    db.pinItem({
+      subjectType: "Issue",
+      subjectTitle: "Second",
+      subjectUrl: "https://github.com/owner/repo/issues/2",
+      repository: "owner/repo",
+      groupName: "MyGroup",
+    });
+
+    const groups = db.getPinnedGrouped();
+    const items = groups.get("MyGroup");
+    expect(items).toBeDefined();
+    expect(items?.length).toBe(2);
+    expect(items?.[0]?.sort_order).toBe(0);
+    expect(items?.[1]?.sort_order).toBe(1);
+    db.close();
+  });
+
+  it("unpinItem removes the pin", () => {
+    const db = createTestDb();
+    const id = db.pinItem({
+      subjectType: "Issue",
+      subjectTitle: "To remove",
+      subjectUrl: "https://github.com/owner/repo/issues/1",
+      repository: "owner/repo",
+    });
+
+    db.unpinItem(id);
+    const groups = db.getPinnedGrouped();
+    expect(groups.size).toBe(0);
+    db.close();
+  });
+
+  it("unpinItem is idempotent for nonexistent id", () => {
+    const db = createTestDb();
+    // Should not throw
+    db.unpinItem(pinId(999));
     db.close();
   });
 });

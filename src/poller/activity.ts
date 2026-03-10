@@ -10,6 +10,7 @@ const PRUNE_DAYS = 30;
 export interface ActivityPollerOptions {
   intervalMs?: number;
   pruneDays?: number;
+  onSync?: () => void;
 }
 
 export class ActivityPoller {
@@ -17,6 +18,7 @@ export class ActivityPoller {
   private running = false;
   private readonly intervalMs: number;
   private readonly pruneDays: number;
+  private readonly onSync: (() => void) | undefined;
 
   constructor(
     private readonly db: GHDDatabase,
@@ -26,6 +28,7 @@ export class ActivityPoller {
   ) {
     this.intervalMs = options?.intervalMs ?? DEFAULT_INTERVAL_MS;
     this.pruneDays = options?.pruneDays ?? PRUNE_DAYS;
+    this.onSync = options?.onSync;
   }
 
   start(): void {
@@ -73,6 +76,8 @@ export class ActivityPoller {
 
       // Update last poll timestamp
       this.db.setSyncMeta(SYNC_KEY, new Date().toISOString());
+
+      this.onSync?.();
 
       return { processed };
     } catch (err) {

@@ -3,6 +3,7 @@ import type {
   ActivityRow,
   NotificationEventRow,
   NotificationRow,
+  PinId,
   PinnedRow,
   SyncMetaRow,
   ThreadId,
@@ -10,6 +11,7 @@ import type {
   UpsertNotificationEventInput,
   UpsertNotificationInput,
 } from "./types.js";
+import { pinId } from "./types.js";
 
 export class GHDDatabase {
   constructor(private readonly db: Database) {}
@@ -149,7 +151,49 @@ export class GHDDatabase {
     return result.changes;
   }
 
-  // --- Pinned (read-only for now, full CRUD in Phase 3) ---
+  // --- Pinned ---
+
+  pinItem(input: {
+    subjectType: string;
+    subjectTitle: string;
+    subjectUrl: string;
+    repository: string;
+    groupName?: string;
+    notificationThreadId?: ThreadId | null;
+  }): PinId {
+    const groupName = input.groupName ?? "Default";
+    // Place at end of group: max(sort_order) + 1
+    const maxOrder = this.db
+      .query<{ max_order: number | null }, [string]>(
+        "SELECT MAX(sort_order) as max_order FROM pinned WHERE group_name = ?1",
+      )
+      .get(groupName);
+    const sortOrder = (maxOrder?.max_order ?? -1) + 1;
+
+    this.db.run(
+      `INSERT INTO pinned (
+        notification_thread_id, subject_type, subject_title, subject_url,
+        repository, group_name, sort_order
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+      [
+        input.notificationThreadId ?? null,
+        input.subjectType,
+        input.subjectTitle,
+        input.subjectUrl,
+        input.repository,
+        groupName,
+        sortOrder,
+      ],
+    );
+
+    const row = this.db.query<{ id: number }, []>("SELECT last_insert_rowid() as id").get();
+    if (!row) throw new Error("Failed to get last_insert_rowid");
+    return pinId(row.id);
+  }
+
+  unpinItem(id: PinId): void {
+    this.db.run("DELETE FROM pinned WHERE id = ?1", [id]);
+  }
 
   getPinnedGrouped(): Map<string, PinnedRow[]> {
     const rows = this.db
