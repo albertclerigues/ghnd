@@ -37,7 +37,7 @@ function handlePullRequestEvent(event: GitHubUserEvent): NormalizedActivity | nu
     action,
     targetTitle: pr?.title ?? "Pull Request",
     targetUrl: pr?.html_url ?? null,
-    body: null,
+    body: pr?.body ?? null,
   };
 }
 
@@ -46,7 +46,7 @@ function handlePullRequestReviewEvent(event: GitHubUserEvent): NormalizedActivit
     action: "reviewed",
     targetTitle: event.payload.pull_request?.title ?? "Review",
     targetUrl: event.payload.pull_request?.html_url ?? null,
-    body: null,
+    body: event.payload.pull_request?.body ?? null,
   };
 }
 
@@ -57,7 +57,7 @@ function handleIssuesEvent(event: GitHubUserEvent): NormalizedActivity | null {
     action,
     targetTitle: event.payload.issue?.title ?? "Issue",
     targetUrl: event.payload.issue?.html_url ?? null,
-    body: null,
+    body: event.payload.issue?.body ?? null,
   };
 }
 
@@ -106,7 +106,7 @@ function handleReleaseEvent(event: GitHubUserEvent): NormalizedActivity {
     action: "released",
     targetTitle: event.payload.release?.tag_name ?? "Release",
     targetUrl: event.payload.release?.html_url ?? null,
-    body: null,
+    body: event.payload.release?.body ?? null,
   };
 }
 

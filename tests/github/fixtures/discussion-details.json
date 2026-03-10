@@ -1,0 +1,7 @@
+{
+  "number": 55,
+  "title": "RFC: New plugin architecture",
+  "body": "This discussion proposes a new plugin architecture for the project.\n\n## Motivation\nThe current extension system is limited and doesn't support third-party plugins.\n\n## Proposal\nIntroduce a plugin registry with lifecycle hooks.",
+  "url": "https://github.com/acme/project/discussions/55",
+  "author": { "login": "alice" }
+}

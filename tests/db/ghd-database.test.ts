@@ -270,7 +270,7 @@ describe("GHDDatabase — Activity", () => {
     db.close();
   });
 
-  it("upsertActivity does nothing on duplicate eventId", () => {
+  it("upsertActivity updates body on duplicate eventId but preserves other fields", () => {
     const db = createTestDb();
     const eid = activityId("a1");
 
@@ -292,12 +292,15 @@ describe("GHDDatabase — Activity", () => {
       action: "committed",
       targetTitle: "Second",
       targetUrl: null,
-      body: null,
+      body: "Backfilled comment body",
       eventTimestamp: "2026-03-10T00:00:00Z",
     });
 
     const rows = db.getActivity();
     expect(rows.length).toBe(1);
+    // body is updated on conflict
+    expect(rows[0]?.body).toBe("Backfilled comment body");
+    // other fields are NOT updated
     expect(rows[0]?.target_title).toBe("First");
     db.close();
   });

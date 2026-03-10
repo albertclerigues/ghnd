@@ -483,11 +483,15 @@ function renderNotificationSidebar(notif: NotificationWithEvents): string {
   } else if (notif.descriptionSummary) {
     bodyHtml = renderMarkdown(notif.descriptionSummary);
   } else {
-    bodyHtml = "<p>No description.</p>";
+    bodyHtml = "";
   }
 
   const summaryLine = notif.descriptionSummary
     ? `<div class="sidebar-meta-detail">\u2728 ${escapeHtml(notif.descriptionSummary)}</div>`
+    : "";
+
+  const bodySection = bodyHtml
+    ? `<hr class="sidebar-divider"><div class="sidebar-body">${bodyHtml}</div>`
     : "";
 
   return `
@@ -495,8 +499,7 @@ function renderNotificationSidebar(notif: NotificationWithEvents): string {
     <div class="sidebar-meta-repo">${escapeHtml(notif.repository)}</div>
     <div class="sidebar-meta-detail">${escapeHtml(notif.subjectType)} \u00b7 ${escapeHtml(notif.reason)} \u00b7 ${relativeTime(notif.githubUpdatedAt)}</div>
     ${summaryLine}
-    <hr class="sidebar-divider">
-    <div class="sidebar-body">${bodyHtml}</div>
+    ${bodySection}
   `;
 }
 

@@ -1,4 +1,5 @@
 import type {
+  GitHubDiscussionDetails,
   GitHubIssueDetails,
   GitHubNotificationThread,
   GitHubTimelineEvent,
@@ -27,6 +28,12 @@ export interface GitHubClient {
   listUserEvents(username: string): Promise<GitHubUserEvent[]>;
 
   getIssueDetails(owner: string, repo: string, issueNumber: number): Promise<GitHubIssueDetails>;
+
+  getDiscussionDetails(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<GitHubDiscussionDetails>;
 
   markThreadAsRead(threadId: string): Promise<void>;
 
@@ -72,6 +79,46 @@ export class FetchGitHubClient implements GitHubClient {
     issueNumber: number,
   ): Promise<GitHubIssueDetails> {
     return this.get<GitHubIssueDetails>(`/repos/${owner}/${repo}/issues/${String(issueNumber)}`);
+  }
+
+  async getDiscussionDetails(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<GitHubDiscussionDetails> {
+    const query = `query($owner: String!, $repo: String!, $number: Int!) {
+      repository(owner: $owner, name: $repo) {
+        discussion(number: $number) {
+          number
+          title
+          body
+          url
+          author { login }
+        }
+      }
+    }`;
+
+    const response = await this.request("https://api.github.com/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables: { owner, repo, number } }),
+    });
+
+    const json = (await response.json()) as {
+      data?: { repository?: { discussion?: GitHubDiscussionDetails } };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (json.errors?.length) {
+      throw new Error(`GraphQL error: ${json.errors[0]?.message ?? "unknown"}`);
+    }
+
+    const discussion = json.data?.repository?.discussion;
+    if (!discussion) {
+      throw new Error(`Discussion not found: ${owner}/${repo}#${String(number)}`);
+    }
+
+    return discussion;
   }
 
   async listUserEvents(username: string): Promise<GitHubUserEvent[]> {

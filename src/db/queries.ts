@@ -125,6 +125,18 @@ export class GHDDatabase {
     );
   }
 
+  getNotificationsMissingDescription(): Array<{ thread_id: string; subject_url: string }> {
+    return this.db
+      .query<{ thread_id: string; subject_url: string }, []>(
+        `SELECT thread_id, subject_url FROM notifications
+         WHERE description_body IS NULL
+           AND subject_type IN ('Issue', 'PullRequest', 'Discussion')
+           AND subject_url IS NOT NULL
+           AND dismissed_at IS NULL`,
+      )
+      .all();
+  }
+
   updateDescriptionBody(threadId: ThreadId, body: string | null): void {
     this.db.run(
       "UPDATE notifications SET description_body = ?2, updated_at = datetime('now') WHERE thread_id = ?1",
@@ -146,7 +158,8 @@ export class GHDDatabase {
       `INSERT INTO activity (
         event_id, event_type, repository, action, target_title, target_url, body, event_timestamp
       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-      ON CONFLICT(event_id) DO NOTHING`,
+      ON CONFLICT(event_id) DO UPDATE SET
+        body = excluded.body`,
       [
         input.eventId,
         input.eventType,

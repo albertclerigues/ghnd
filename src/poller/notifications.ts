@@ -9,7 +9,7 @@ import {
   extractTimestamp,
   mapEventType,
 } from "../github/events.js";
-import { apiUrlToHtmlUrl, parseSubjectUrl } from "../github/urls.js";
+import { apiUrlToHtmlUrl, parseHtmlSubjectUrl, parseSubjectUrl } from "../github/urls.js";
 import type { Summarizer } from "../summarizer/types.js";
 
 const SYNC_KEY = "notifications_last_poll";
@@ -73,6 +73,9 @@ export class NotificationPoller {
         }
       }
 
+      // Backfill descriptions for notifications that were inserted before the feature existed
+      await this.backfillDescriptions();
+
       // Update last poll timestamp
       this.db.setSyncMeta(SYNC_KEY, new Date().toISOString());
 
@@ -84,6 +87,29 @@ export class NotificationPoller {
       return { processed: 0 };
     } finally {
       this.running = false;
+    }
+  }
+
+  private async backfillDescriptions(): Promise<void> {
+    const missing = this.db.getNotificationsMissingDescription();
+    for (const row of missing) {
+      try {
+        const parsed = parseHtmlSubjectUrl(row.subject_url);
+        if (!parsed) continue;
+        const tid = threadId(row.thread_id);
+        if (row.subject_url.includes("/discussions/")) {
+          await this.fetchAndStoreDiscussionDescription(
+            tid,
+            parsed.owner,
+            parsed.repo,
+            parsed.number,
+          );
+        } else {
+          await this.fetchAndStoreDescription(tid, parsed.owner, parsed.repo, parsed.number);
+        }
+      } catch (err) {
+        console.error(`[ghd] Backfill description failed for ${row.thread_id}:`, err);
+      }
     }
   }
 
@@ -107,11 +133,20 @@ export class NotificationPoller {
     });
 
     // Fetch timeline events if we can parse the subject URL
-    // Discussions don't have a REST API for timeline/details, so skip them
     if (notification.subject.url) {
       const parsed = parseSubjectUrl(notification.subject.url);
-      if (parsed && parsed.kind !== "discussion") {
-        await this.fetchAndStoreTimeline(tid, parsed.owner, parsed.repo, parsed.number);
+      if (parsed) {
+        if (parsed.kind === "discussion") {
+          // Discussions use GraphQL API — fetch description only (no timeline)
+          await this.fetchAndStoreDiscussionDescription(
+            tid,
+            parsed.owner,
+            parsed.repo,
+            parsed.number,
+          );
+        } else {
+          await this.fetchAndStoreTimeline(tid, parsed.owner, parsed.repo, parsed.number);
+        }
       }
     }
   }
@@ -154,6 +189,20 @@ export class NotificationPoller {
 
     if (this.summarizer) {
       void this.summarizeThread(tid, commentEvents);
+    }
+  }
+
+  private async fetchAndStoreDiscussionDescription(
+    tid: ThreadId,
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<void> {
+    try {
+      const details = await this.github.getDiscussionDetails(owner, repo, number);
+      this.db.updateDescriptionBody(tid, details.body);
+    } catch (err) {
+      console.error(`[ghd] Failed to fetch discussion description for thread ${String(tid)}:`, err);
     }
   }
 

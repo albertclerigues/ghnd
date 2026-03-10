@@ -35,3 +35,20 @@ export function parseSubjectUrl(
     kind: kindMap[match[3]] ?? "issue",
   };
 }
+
+/**
+ * Extracts owner, repo, and number from a GitHub HTML subject URL.
+ * e.g., "https://github.com/acme/project/issues/42"
+ *     → { owner: "acme", repo: "project", number: 42 }
+ */
+export function parseHtmlSubjectUrl(
+  htmlUrl: string,
+): { owner: string; repo: string; number: number } | null {
+  const match = /github\.com\/([^/]+)\/([^/]+)\/(issues|pull|discussions)\/(\d+)/.exec(htmlUrl);
+  if (!match?.[1] || !match[2] || !match[4]) return null;
+  return {
+    owner: match[1],
+    repo: match[2],
+    number: Number.parseInt(match[4], 10),
+  };
+}

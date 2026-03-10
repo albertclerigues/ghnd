@@ -22,9 +22,9 @@ describe("NotificationPoller", () => {
     const { db, poller } = setup();
     const result = await poller.poll();
 
-    expect(result.processed).toBe(2);
+    expect(result.processed).toBe(3);
     const notifications = db.getNotifications();
-    expect(notifications.length).toBe(2);
+    expect(notifications.length).toBe(3);
     db.close();
   });
 
@@ -48,7 +48,7 @@ describe("NotificationPoller", () => {
     await poller.poll();
 
     const notifications = db.getNotifications();
-    expect(notifications.length).toBe(2);
+    expect(notifications.length).toBe(3);
     db.close();
   });
 
@@ -152,6 +152,34 @@ describe("NotificationPoller", () => {
     db.close();
   });
 
+  it("poll() backfills missing descriptions for existing notifications", async () => {
+    const { db, poller } = setup();
+
+    // Manually insert a notification without a description (simulating pre-feature data)
+    db.upsertNotification({
+      threadId: threadId("9999999999"),
+      repository: "acme/project",
+      subjectType: "Issue",
+      subjectTitle: "Fix memory leak in notification poller",
+      subjectUrl: "https://github.com/acme/project/issues/42",
+      reason: "subscribed",
+      unread: true,
+      githubUpdatedAt: "2026-01-01T00:00:00Z",
+      githubLastReadAt: null,
+    });
+
+    // Verify no description yet
+    const before = db.getNotificationByThreadId(threadId("9999999999"));
+    expect(before?.description_body).toBeNull();
+
+    // Poll — the `since` filter won't re-process this notification,
+    // but the backfill step should pick it up
+    await poller.poll();
+
+    const after = db.getNotificationByThreadId(threadId("9999999999"));
+    expect(after?.description_body).toContain("dark mode");
+  });
+
   it("poll() with failing summarizer still stores notifications and events", async () => {
     const failingSummarizer: Summarizer = {
       async summarize() {
@@ -166,7 +194,42 @@ describe("NotificationPoller", () => {
     });
 
     const notifications = db.getNotifications();
-    expect(notifications.length).toBe(2);
+    expect(notifications.length).toBe(3);
+    db.close();
+  });
+
+  it("poll() stores discussion description via GraphQL", async () => {
+    const { db, poller } = setup();
+    await poller.poll();
+
+    const discussion = db.getNotificationByThreadId(threadId("1234567892"));
+    expect(discussion?.description_body).toContain("plugin architecture");
+    db.close();
+  });
+
+  it("poll() backfills missing discussion descriptions", async () => {
+    const { db, poller } = setup();
+
+    // Manually insert a discussion notification without a description
+    db.upsertNotification({
+      threadId: threadId("8888888888"),
+      repository: "acme/project",
+      subjectType: "Discussion",
+      subjectTitle: "RFC: New plugin architecture",
+      subjectUrl: "https://github.com/acme/project/discussions/55",
+      reason: "subscribed",
+      unread: true,
+      githubUpdatedAt: "2026-01-01T00:00:00Z",
+      githubLastReadAt: null,
+    });
+
+    const before = db.getNotificationByThreadId(threadId("8888888888"));
+    expect(before?.description_body).toBeNull();
+
+    await poller.poll();
+
+    const after = db.getNotificationByThreadId(threadId("8888888888"));
+    expect(after?.description_body).toContain("plugin architecture");
     db.close();
   });
 });

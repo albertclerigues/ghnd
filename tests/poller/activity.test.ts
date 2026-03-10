@@ -18,11 +18,11 @@ describe("ActivityPoller", () => {
     const { db, poller } = setup();
     const result = await poller.poll();
 
-    // 5 fixture events: PushEvent, IssueCommentEvent, PullRequestEvent,
-    // PullRequestReviewEvent, CreateEvent — all should be normalized
-    expect(result.processed).toBe(5);
+    // 7 fixture events: PushEvent, IssueCommentEvent, PullRequestEvent,
+    // PullRequestReviewEvent, CreateEvent, IssuesEvent, ReleaseEvent — all should be normalized
+    expect(result.processed).toBe(7);
     const activity = db.getActivity();
-    expect(activity.length).toBe(5);
+    expect(activity.length).toBe(7);
     db.close();
   });
 
@@ -30,9 +30,9 @@ describe("ActivityPoller", () => {
     const { db, poller } = setup();
     await poller.poll();
 
-    // All 5 fixture events are known types, so all should be processed
+    // All 7 fixture events are known types, so all should be processed
     const activity = db.getActivity();
-    expect(activity.length).toBe(5);
+    expect(activity.length).toBe(7);
     db.close();
   });
 
@@ -42,7 +42,7 @@ describe("ActivityPoller", () => {
     await poller.poll();
 
     const activity = db.getActivity();
-    expect(activity.length).toBe(5);
+    expect(activity.length).toBe(7);
     db.close();
   });
 

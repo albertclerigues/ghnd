@@ -67,11 +67,16 @@ describe("normalizeUserEvent", () => {
         type: "PullRequestEvent",
         payload: {
           action: "opened",
-          pull_request: { title: "Add feature", html_url: "https://github.com/owner/repo/pull/1" },
+          pull_request: {
+            title: "Add feature",
+            html_url: "https://github.com/owner/repo/pull/1",
+            body: "This adds a new feature.",
+          },
         },
       }),
     );
     expect(result?.action).toBe("opened");
+    expect(result?.body).toBe("This adds a new feature.");
   });
 
   it("handles PullRequestEvent — closed (not merged)", () => {
@@ -114,14 +119,37 @@ describe("normalizeUserEvent", () => {
         type: "PullRequestReviewEvent",
         payload: {
           action: "submitted",
-          pull_request: { title: "PR", html_url: "https://github.com/owner/repo/pull/1" },
+          pull_request: {
+            title: "PR",
+            html_url: "https://github.com/owner/repo/pull/1",
+            body: "Review of the PR.",
+          },
         },
       }),
     );
     expect(result?.action).toBe("reviewed");
+    expect(result?.body).toBe("Review of the PR.");
   });
 
   it("handles IssuesEvent — opened", () => {
+    const result = normalizeUserEvent(
+      makeEvent({
+        type: "IssuesEvent",
+        payload: {
+          action: "opened",
+          issue: {
+            title: "New issue",
+            html_url: "https://github.com/owner/repo/issues/1",
+            body: "Description of the issue.",
+          },
+        },
+      }),
+    );
+    expect(result?.action).toBe("opened");
+    expect(result?.body).toBe("Description of the issue.");
+  });
+
+  it("handles IssuesEvent — body is null when not provided", () => {
     const result = normalizeUserEvent(
       makeEvent({
         type: "IssuesEvent",
@@ -131,7 +159,7 @@ describe("normalizeUserEvent", () => {
         },
       }),
     );
-    expect(result?.action).toBe("opened");
+    expect(result?.body).toBeNull();
   });
 
   it("handles CreateEvent", () => {
@@ -175,11 +203,16 @@ describe("normalizeUserEvent", () => {
       makeEvent({
         type: "ReleaseEvent",
         payload: {
-          release: { tag_name: "v1.0", html_url: "https://github.com/owner/repo/releases/v1.0" },
+          release: {
+            tag_name: "v1.0",
+            html_url: "https://github.com/owner/repo/releases/v1.0",
+            body: "Release notes for v1.0.",
+          },
         },
       }),
     );
     expect(result?.action).toBe("released");
+    expect(result?.body).toBe("Release notes for v1.0.");
   });
 
   it("returns null for unknown event types", () => {

@@ -30,5 +30,21 @@
       "full_name": "acme/project",
       "html_url": "https://github.com/acme/project"
     }
+  },
+  {
+    "id": "1234567892",
+    "unread": true,
+    "reason": "subscribed",
+    "updated_at": "2026-03-10T07:00:00Z",
+    "last_read_at": null,
+    "subject": {
+      "title": "RFC: New plugin architecture",
+      "url": "https://api.github.com/repos/acme/project/discussions/55",
+      "type": "Discussion"
+    },
+    "repository": {
+      "full_name": "acme/project",
+      "html_url": "https://github.com/acme/project"
+    }
   }
 ]

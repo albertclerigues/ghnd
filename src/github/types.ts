@@ -44,13 +44,13 @@ export interface GitHubUserEvent {
   };
   payload: {
     action?: string; // "opened", "closed", "created", etc.
-    pull_request?: { title: string; html_url: string; merged?: boolean };
-    issue?: { title: string; html_url: string };
+    pull_request?: { title: string; html_url: string; merged?: boolean; body?: string };
+    issue?: { title: string; html_url: string; body?: string };
     comment?: { html_url: string; body?: string };
     commits?: Array<{ message: string }>;
     ref?: string;
     ref_type?: string;
-    release?: { tag_name: string; html_url: string };
+    release?: { tag_name: string; html_url: string; body?: string };
     forkee?: { full_name: string; html_url: string };
   };
   created_at: string;
@@ -65,6 +65,17 @@ export interface GitHubIssueDetails {
     login: string;
   } | null;
   html_url: string;
+}
+
+// --- Discussion Details (GraphQL API) ---
+export interface GitHubDiscussionDetails {
+  number: number;
+  title: string;
+  body: string | null;
+  url: string;
+  author: {
+    login: string;
+  } | null;
 }
 
 // --- Rate Limit Info ---

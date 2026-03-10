@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
-    "electrobun": "1.15.1"
+    "electrobun": "1.15.1",
+    "marked": "^17.0.4"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.6",

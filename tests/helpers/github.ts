@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { GitHubClient } from "../../src/github/client.js";
 import type {
+  GitHubDiscussionDetails,
   GitHubIssueDetails,
   GitHubNotificationThread,
   GitHubTimelineEvent,
@@ -27,6 +28,7 @@ export class FixtureGitHubClient implements GitHubClient {
   private notifications: GitHubNotificationThread[];
   private timelines: Map<string, GitHubTimelineEvent[]>;
   private issueDetails: Map<string, GitHubIssueDetails>;
+  private discussionDetails: Map<string, GitHubDiscussionDetails>;
   private userEvents: GitHubUserEvent[];
   private markedAsRead: Set<string> = new Set();
 
@@ -39,6 +41,9 @@ export class FixtureGitHubClient implements GitHubClient {
     this.issueDetails = new Map([
       ["acme/project/42", loadFixture<GitHubIssueDetails>("issue-details.json")],
       ["acme/project/99", loadFixture<GitHubIssueDetails>("pr-details.json")],
+    ]);
+    this.discussionDetails = new Map([
+      ["acme/project/55", loadFixture<GitHubDiscussionDetails>("discussion-details.json")],
     ]);
     this.userEvents = loadFixture<GitHubUserEvent[]>("user-events.json");
   }
@@ -73,6 +78,19 @@ export class FixtureGitHubClient implements GitHubClient {
     const details = this.issueDetails.get(key);
     if (!details) {
       throw new Error(`Fixture not found: ${key}`);
+    }
+    return details;
+  }
+
+  async getDiscussionDetails(
+    owner: string,
+    repo: string,
+    number: number,
+  ): Promise<GitHubDiscussionDetails> {
+    const key = `${owner}/${repo}/${String(number)}`;
+    const details = this.discussionDetails.get(key);
+    if (!details) {
+      throw new Error(`Discussion fixture not found: ${key}`);
     }
     return details;
   }
