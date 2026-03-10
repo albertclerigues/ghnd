@@ -183,8 +183,8 @@ export default {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `bun install` completes without errors
-- [ ] All directories exist as specified
+- [x] `bun install` completes without errors
+- [x] All directories exist as specified
 
 ---
 
@@ -242,7 +242,7 @@ Configure TypeScript at maximum strictness as specified in the design doc, inclu
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `bun run typecheck` passes with zero errors
+- [x] `bun run typecheck` passes with zero errors
 
 ---
 
@@ -362,9 +362,9 @@ pre-push:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `bun run check` passes with zero errors
-- [ ] `bun run typecheck` passes with zero errors
-- [ ] `bunx lefthook install` succeeds and hooks are registered
+- [x] `bun run check` passes with zero errors
+- [x] `bun run typecheck` passes with zero errors
+- [x] `bunx lefthook install` succeeds and hooks are registered
 
 ---
 
@@ -1027,9 +1027,9 @@ describe("sync_meta CRUD", () => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `bun run typecheck` passes
-- [ ] `bun run check` passes
-- [ ] `bun test` passes — all migration and query tests green
+- [x] `bun run typecheck` passes
+- [x] `bun run check` passes
+- [x] `bun test` passes — all migration and query tests green
 
 ---
 
@@ -1243,9 +1243,9 @@ document.addEventListener("DOMContentLoaded", initTabs);
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `bun run typecheck` passes
-- [ ] `bun run check` passes
-- [ ] `bun test` passes
+- [x] `bun run typecheck` passes
+- [x] `bun run check` passes
+- [x] `bun test` passes
 
 #### Manual Verification:
 - [ ] `bun run dev` launches a native macOS window with traffic lights inset

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHD</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <header id="titlebar">
+    <nav id="tabs">
+      <button type="button" class="tab active" data-tab="notifications">Notifications</button>
+      <button type="button" class="tab" data-tab="pinned">Pinned</button>
+      <button type="button" class="tab" data-tab="activity">Activity</button>
+    </nav>
+  </header>
+
+  <main id="content">
+    <section id="tab-notifications" class="tab-panel active">
+      <p class="placeholder">Notifications will appear here.</p>
+    </section>
+    <section id="tab-pinned" class="tab-panel">
+      <p class="placeholder">Pinned items will appear here.</p>
+    </section>
+    <section id="tab-activity" class="tab-panel">
+      <p class="placeholder">Activity feed will appear here.</p>
+    </section>
+  </main>
+
+  <script src="index.js"></script>
+</body>
+</html>
